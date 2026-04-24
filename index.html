@@ -271,13 +271,13 @@
             document.body.classList.add('manual-call-mode'); setTimeout(() => document.body.classList.remove('manual-call-mode'), 2000);
         }
 
-        let prev = null, motionFrames = 0, lastT = Date.now();
+        let prev = null, motionStartTime = 0, lastMotionTime = 0;
 
         function process() {
-            if (remoteVideo.paused || remoteVideo.ended) { lastT = Date.now(); setTimeout(process, 33); return; }
+            if (remoteVideo.paused || remoteVideo.ended) { setTimeout(process, 33); return; }
 
-            const nowTime = Date.now();
-            if (nowTime < gracePeriodEnd || (lastN > 0 && nowTime < lastN + 5000)) {
+            const now = Date.now();
+            if (now < gracePeriodEnd || (lastN > 0 && now < lastN + 5000)) {
                 updateSilenceBtn();
             } else if (isCountingDown || gracePeriodEnd > 0) {
                 gracePeriodEnd = 0;
@@ -287,8 +287,6 @@
             if (remoteVideo.videoWidth > 0 && (canvas.width !== remoteVideo.videoWidth || canvas.height !== remoteVideo.videoHeight)) {
                 canvas.width = remoteVideo.videoWidth; canvas.height = remoteVideo.videoHeight; prev = null;
             }
-
-            lastT = Date.now();
 
             ctx.drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
             const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
@@ -318,16 +316,22 @@
             let isBg = document.hidden;
 
             let minBlocks = isBg ? Math.max(10, totalBlocks * (0.01 + (invSens * 0.002))) : Math.max(1, Math.floor(invSens / 10));
-            let targetFrames = isBg ? Math.max(2, Math.floor(1 + (invSens * 0.1))) : Math.floor(5 + (invSens * 0.25));
+
+            let targetTime = isBg ? 2000 : 100 + (invSens * 10); // 80% = 300ms. 0% = 1100ms.
+            let maxSilence = isBg ? 1500 : 350;
 
             if (moving > minBlocks && moving < totalBlocks * 0.5) {
-                motionFrames++;
-                if (motionFrames >= targetFrames) {
+                if (motionStartTime === 0) motionStartTime = now;
+                lastMotionTime = now;
+
+                if (now - motionStartTime >= targetTime) {
                     triggerMotion();
-                    motionFrames = 0;
+                    motionStartTime = 0;
                 }
             } else {
-                motionFrames = 0;
+                if (now - lastMotionTime > maxSilence) {
+                    motionStartTime = 0;
+                }
             }
 
             setTimeout(process, 33);
