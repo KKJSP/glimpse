@@ -168,7 +168,7 @@
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const statusEl = document.getElementById('status');
 
-        let dataConn = null, isSilenced = false, isAvail = true, gracePeriodEnd = 0;
+        let dataConn = null, isSilenced = false, isAvail = true, gracePeriodEnd = 0, lastN = 0, isCountingDown = false;
 
         function handleDisconnect() {
             statusEl.innerText = "Waiting for Broadcaster";
@@ -219,16 +219,32 @@
         function updateSilenceBtn() {
             const b = document.getElementById('btn-silence'), now = Date.now();
             if (now < gracePeriodEnd) {
-                b.innerText = `Motion Alerts in ${Math.ceil((gracePeriodEnd - now) / 1000)}s`; b.classList.add('danger');
+                b.innerText = `Motion Alerts in ${Math.ceil((gracePeriodEnd - now) / 1000)}s`;
+                b.classList.add('danger');
+                isCountingDown = true;
+            } else if (lastN > 0 && now < lastN + 5000) {
+                b.innerText = `Next Alert in ${Math.ceil(((lastN + 5000) - now) / 1000)}s`;
+                b.classList.add('danger');
+                isCountingDown = true;
             } else {
                 b.innerText = isSilenced ? "Unsilence Alerts" : "Silence Motion Alerts";
                 if (isSilenced) b.classList.add('danger'); else b.classList.remove('danger');
+                isCountingDown = false;
             }
         }
 
         function toggleSilence() {
-            if (Date.now() < gracePeriodEnd) { gracePeriodEnd = 0; isSilenced = false; }
-            else { isSilenced = !isSilenced; }
+            const now = Date.now();
+            const inGracePeriod = now < gracePeriodEnd;
+            const inCooldown = lastN > 0 && now < lastN + 5000;
+
+            if (inGracePeriod || inCooldown) {
+                gracePeriodEnd = 0;
+                lastN = 0;
+                isSilenced = false;
+            } else {
+                isSilenced = !isSilenced;
+            }
             updateSilenceBtn();
         }
 
@@ -238,7 +254,6 @@
             g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.5); osc.start(); osc.stop(ac.currentTime + 0.5);
         }
 
-        let lastN = 0;
         function triggerMotion() {
             const now = Date.now();
             if (now < gracePeriodEnd || now - lastN < 5000) return;
@@ -248,6 +263,7 @@
             }
             document.body.classList.add('alert-mode'); setTimeout(() => document.body.classList.remove('alert-mode'), 1500);
             lastN = now;
+            updateSilenceBtn();
         }
 
         function triggerManual() {
@@ -260,8 +276,13 @@
         function process() {
             if (remoteVideo.paused || remoteVideo.ended) { lastT = Date.now(); setTimeout(process, 33); return; }
 
-            if (Date.now() < gracePeriodEnd) updateSilenceBtn();
-            else if (gracePeriodEnd > 0) { gracePeriodEnd = 0; updateSilenceBtn(); }
+            const nowTime = Date.now();
+            if (nowTime < gracePeriodEnd || (lastN > 0 && nowTime < lastN + 5000)) {
+                updateSilenceBtn();
+            } else if (isCountingDown || gracePeriodEnd > 0) {
+                gracePeriodEnd = 0;
+                updateSilenceBtn();
+            }
 
             if (remoteVideo.videoWidth > 0 && (canvas.width !== remoteVideo.videoWidth || canvas.height !== remoteVideo.videoHeight)) {
                 canvas.width = remoteVideo.videoWidth; canvas.height = remoteVideo.videoHeight; prev = null;
@@ -291,7 +312,7 @@
             prev = new Uint8ClampedArray(data);
 
             const sliderVal = parseInt(document.getElementById('sens-slider').value, 10);
-            const invSens = 100 - sliderVal; // 0 (Most sensitive) to 100 (Stubborn)
+            const invSens = 100 - sliderVal;
 
             let totalBlocks = Math.floor(canvas.width / 20) * Math.floor(canvas.height / 20);
             let isBg = document.hidden;
