@@ -61,10 +61,20 @@
         }
         video { position: absolute; opacity: 0.01; width: 10px; z-index: -1; }
 
-        .bottom-bar { display: flex; gap: 15px; margin-top: 20px; z-index: 10; }
+        .bottom-bar {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;
+            margin-top: 20px; z-index: 10; width: 100%;
+        }
         .btn-t { background: var(--border); color: var(--text-main); min-width: 180px; }
         .btn-t.active { background: var(--accent); color: white; }
         .btn-t.danger { background: #ef4444; color: white; }
+
+        .slider-group {
+            display: flex; align-items: center; gap: 12px; background: var(--bg-card);
+            border: 1px solid var(--border); padding: 8px 18px; border-radius: 6px;
+        }
+        .slider-group label { font-size: 0.85em; color: var(--text-muted); font-weight: 500; }
+        input[type="range"] { accent-color: var(--accent); cursor: pointer; width: 120px; }
 
         .alert-mode { background-color: #1a0f0f !important; }
         .alert-mode .video-wrapper { border-color: #cc3333; box-shadow: 0 0 0 2px #cc3333, 0 0 30px rgba(204, 51, 51, 0.2); }
@@ -100,6 +110,12 @@
             </div>
             <div id="bottom-bar" class="bottom-bar">
                 <button id="btn-avail" class="btn-t" onclick="toggleAvail()">Mark as Unavailable</button>
+
+                <div class="slider-group">
+                    <label for="sens-slider">Sensitivity</label>
+                    <input type="range" id="sens-slider" min="0" max="100" value="80">
+                </div>
+
                 <button id="btn-silence" class="btn-t danger" onclick="toggleSilence()">Starting Engine...</button>
             </div>
         </div>
@@ -274,11 +290,14 @@
 
             prev = new Uint8ClampedArray(data);
 
-            let totalBlocks = Math.floor(canvas.width / 20) * Math.floor(canvas.height / 20);
+            const sliderVal = parseInt(document.getElementById('sens-slider').value, 10);
+            const invSens = 100 - sliderVal; // 0 (Most sensitive) to 100 (Stubborn)
 
+            let totalBlocks = Math.floor(canvas.width / 20) * Math.floor(canvas.height / 20);
             let isBg = document.hidden;
-            let minBlocks = isBg ? Math.max(10, totalBlocks * 0.05) : 2;
-            let targetFrames = isBg ? 3 : 10;
+
+            let minBlocks = isBg ? Math.max(10, totalBlocks * (0.01 + (invSens * 0.002))) : Math.max(1, Math.floor(invSens / 10));
+            let targetFrames = isBg ? Math.max(2, Math.floor(1 + (invSens * 0.1))) : Math.floor(5 + (invSens * 0.25));
 
             if (moving > minBlocks && moving < totalBlocks * 0.5) {
                 motionFrames++;
