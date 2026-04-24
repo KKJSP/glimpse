@@ -1,44 +1,335 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="icon" type="image/png" href="favicon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motion Monitor Setup</title>
+    <title>Glimpse</title>
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
-            --bg-dark: #121418;
-            --bg-card: #1e2126;
-            --text-main: #f1f5f9;
-            --text-muted: #94a3b8;
-            --accent: #3b82f6;
-            --border: #334155;
+            --bg-dark: #121418; --bg-card: #1e2126; --text-main: #f1f5f9; --text-muted: #94a3b8;
+            --accent: #3b82f6; --green: #10b981; --warning: #f59e0b; --border: #334155;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-dark); color: var(--text-main); text-align: center; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        h1 { margin-bottom: 8px; font-weight: 600; font-size: 2.2em; letter-spacing: -0.5px; }
-        p { margin-top: 0; margin-bottom: 40px; color: var(--text-muted); font-size: 1.1em; }
-        .container { display: flex; gap: 25px; flex-wrap: wrap; justify-content: center; }
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 40px; width: 240px; text-decoration: none; color: var(--text-main); transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-        .card h2 { margin: 0 0 8px 0; font-size: 1.5em; font-weight: 500; }
-        .card span { color: var(--text-muted); font-size: 0.95em; }
+        body {
+            font-family: -apple-system, sans-serif; background: var(--bg-dark); color: var(--text-main);
+            margin: 0; min-height: 100vh; transition: background-color 0.4s ease;
+        }
+
+        #setup-screen {
+            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center;
+        }
+        h1 { margin-bottom: 8px; font-weight: 600; font-size: 2.5em; letter-spacing: -1px; }
+        p.subtitle { margin-top: 0; margin-bottom: 40px; color: var(--text-muted); font-size: 1.1em; }
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 40px;
+            display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 250px;
+        }
+        #qrcode { background: white; padding: 15px; border-radius: 10px; display: inline-block; margin-bottom: 25px; }
+        .instruction { color: var(--text-muted); font-size: 1em; line-height: 1.5; }
+
+        /* --- VIEWER SCREEN STYLES --- */
+        #viewer-screen {
+            display: none; flex-direction: column;
+            height: 100vh; /* Lock height to prevent scroll */
+            overflow: hidden;
+        }
+        header {
+            position: relative; background: var(--bg-card); border-bottom: 1px solid var(--border);
+            padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        .brand { font-weight: 600; font-size: 1.2em; }
+        .status { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.95em; font-weight: 500; color: var(--warning); white-space: nowrap; }
+        .status-connected { color: var(--green); }
+        .controls { display: flex; gap: 10px; }
+        button { font-weight: 500; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: 0.2s; }
+        .btn-p { background: var(--accent); color: white; }
+        .btn-s { background: transparent; color: var(--text-main); border: 1px solid var(--border); }
+
+        .viewer-main {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px; overflow: hidden; /* Keeps child elements contained */
+        }
+
+        /* MODERN VIDEO BEZEL */
+        .video-wrapper {
+            background: #0a0c10;
+            border: 1px solid #2a3140;
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 1400px;
+            height: 100%; /* Flexes to fill available space */
+            max-height: 100%;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+        canvas {
+            border-radius: 6px; background: #000;
+            max-width: 100%; max-height: 100%;
+            object-fit: contain; /* PERFECT SCALING */
+        }
+        video { position: absolute; opacity: 0.01; width: 10px; z-index: -1; }
+
+        .bottom-bar { display: flex; gap: 15px; margin-top: 20px; z-index: 10; }
+        .btn-t { background: var(--border); color: var(--text-main); min-width: 180px; }
+        .btn-t.active { background: var(--accent); color: white; }
+        .btn-t.danger { background: #ef4444; color: white; }
+
+        /* SUBDUED ALERT VISUALS APPLIED TO WRAPPER */
+        .alert-mode { background-color: #1a0f0f !important; }
+        .alert-mode .video-wrapper {
+            border-color: #cc3333;
+            box-shadow: 0 0 0 2px #cc3333, 0 0 30px rgba(204, 51, 51, 0.2);
+        }
+
+        .manual-call-mode { background-color: #1a150a !important; }
+        .manual-call-mode .video-wrapper {
+            border-color: #d97706;
+            box-shadow: 0 0 0 2px #d97706, 0 0 30px rgba(217, 119, 6, 0.2);
+        }
     </style>
 </head>
 <body>
 
-    <h1>Motion Monitor</h1>
-    <p>Select the role for this device</p>
-
-    <div class="container">
-        <a href="broadcaster.html" class="card">
-            <h2>Broadcaster</h2>
-            <span>Act as the Camera</span>
-        </a>
-
-        <a href="viewer.html" class="card">
-            <h2>Viewer</h2>
-            <span>Act as the Monitor</span>
-        </a>
+    <div id="setup-screen">
+        <h1>Glimpse</h1>
+        <p class="subtitle">Local video monitoring</p>
+        <div class="card">
+            <div id="qrcode"></div>
+            <div class="instruction">Scan the QR code with your camera device<br>to start the session.</div>
+        </div>
     </div>
 
+    <div id="viewer-screen">
+        <header>
+            <div class="brand">Glimpse</div>
+            <div id="status" class="status">Waiting for Broadcaster</div>
+            <div class="controls">
+                <button id="btn-notif" class="btn-p" onclick="enableNotifs()">Enable notifications</button>
+                <button class="btn-s" onclick="reset()">New connection</button>
+            </div>
+        </header>
+        <div class="viewer-main">
+            <video id="remote-video" autoplay playsinline muted></video>
+            <div class="video-wrapper">
+                <canvas id="display-canvas" width="800" height="600"></canvas>
+            </div>
+            <div id="bottom-bar" class="bottom-bar">
+                <button id="btn-avail" class="btn-t" onclick="toggleAvail()">Mark as Unavailable</button>
+                <button id="btn-silence" class="btn-t danger" onclick="toggleSilence()">Starting Engine...</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function genId(len) {
+            const arr = new Uint8Array(len); window.crypto.getRandomValues(arr);
+            return Array.from(arr, b => b.toString(36).padStart(2, '0')).join('').substring(0, len);
+        }
+        let myId = localStorage.getItem('glimpseDynamicId');
+        if (!myId) {
+            myId = genId(12);
+            localStorage.setItem('glimpseDynamicId', myId);
+        }
+
+        const currentUrl = window.location.href.split('#')[0].split('?')[0];
+        const basePath = currentUrl.substring(0, currentUrl.lastIndexOf("/"));
+        const link = `${basePath}/broadcaster.html#${myId}`;
+
+        new QRCode(document.getElementById("qrcode"), {
+            text: link, width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L
+        });
+
+        const peer = new Peer(myId);
+        const remoteVideo = document.getElementById('remote-video');
+        const canvas = document.getElementById('display-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const statusEl = document.getElementById('status');
+
+        let dataConn = null, isSilenced = false, isAvail = true;
+        let gracePeriodEnd = 0;
+
+        function handleDisconnect() {
+            statusEl.innerText = "Waiting for Broadcaster";
+            statusEl.className = "status";
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        peer.on('call', call => {
+            call.answer();
+            call.on('stream', s => {
+                document.getElementById('setup-screen').style.display = 'none';
+                document.getElementById('viewer-screen').style.display = 'flex';
+
+                statusEl.innerText = "Broadcaster Connected";
+                statusEl.className = "status status-connected";
+
+                remoteVideo.srcObject = s;
+                gracePeriodEnd = Date.now() + 30000;
+                updateSilenceBtn();
+
+                remoteVideo.onloadedmetadata = () => {
+                    canvas.width = remoteVideo.videoWidth;
+                    canvas.height = remoteVideo.videoHeight;
+                    setTimeout(process, 33);
+                };
+            });
+
+            // Instant drop detection via WebRTC ICE state
+            call.peerConnection.addEventListener('iceconnectionstatechange', () => {
+                if (call.peerConnection.iceConnectionState === 'disconnected' ||
+                    call.peerConnection.iceConnectionState === 'failed') {
+                    handleDisconnect();
+                }
+            });
+
+            call.on('close', handleDisconnect);
+        });
+
+        peer.on('connection', conn => {
+            dataConn = conn;
+            conn.on('data', d => { if (d === 'manual-alert') triggerManual(); });
+            conn.on('close', handleDisconnect);
+        });
+
+        function reset() {
+            localStorage.removeItem('glimpseDynamicId');
+            window.location.reload();
+        }
+
+        function checkNotificationStatus() {
+            if ("Notification" in window && Notification.permission === "granted") {
+                document.getElementById('btn-notif').style.display = 'none';
+            }
+        }
+
+        function enableNotifs() {
+            if ("Notification" in window) {
+                Notification.requestPermission().then(permission => { checkNotificationStatus(); });
+            }
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume();
+        }
+
+        checkNotificationStatus();
+
+        function toggleAvail() {
+            isAvail = !isAvail; const b = document.getElementById('btn-avail');
+            b.innerText = isAvail ? "Mark as Unavailable" : "Mark as Available";
+            b.classList.toggle('active');
+            if (dataConn) dataConn.send(isAvail ? 'set-available' : 'set-unavailable');
+        }
+
+        function updateSilenceBtn() {
+            const b = document.getElementById('btn-silence');
+            const now = Date.now();
+
+            if (now < gracePeriodEnd) {
+                const sec = Math.ceil((gracePeriodEnd - now) / 1000);
+                b.innerText = `Motion Alerts in ${sec}s`;
+                b.classList.add('danger');
+            } else {
+                if (isSilenced) {
+                    b.innerText = "Unsilence Alerts";
+                    b.classList.add('danger');
+                } else {
+                    b.innerText = "Silence Motion Alerts";
+                    b.classList.remove('danger');
+                }
+            }
+        }
+
+        function toggleSilence() {
+            const now = Date.now();
+            if (now < gracePeriodEnd) {
+                gracePeriodEnd = 0;
+                isSilenced = false;
+            } else {
+                isSilenced = !isSilenced;
+            }
+            updateSilenceBtn();
+        }
+
+        function beep(vol = 1, freq = 800) {
+            const ac = new (window.AudioContext || window.webkitAudioContext)(); const osc = ac.createOscillator(); const g = ac.createGain();
+            osc.connect(g); g.connect(ac.destination); osc.frequency.value = freq; g.gain.setValueAtTime(vol, ac.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.5); osc.start(); osc.stop(ac.currentTime + 0.5);
+        }
+
+        let lastN = 0;
+        function triggerMotion() {
+            const now = Date.now();
+            if (now < gracePeriodEnd) return;
+
+            if (now - lastN > 5000) {
+                if (!isSilenced) {
+                    beep(1, 800); setTimeout(() => beep(1, 800), 300);
+                    if (Notification.permission === "granted") new Notification("Glimpse Alert", { body: "Motion detected" });
+                }
+                document.body.classList.add('alert-mode');
+                setTimeout(() => document.body.classList.remove('alert-mode'), 1500);
+                lastN = now;
+            }
+        }
+
+        function triggerManual() {
+            beep(1, 1000); setTimeout(() => beep(1, 1000), 250); setTimeout(() => beep(1, 1000), 500);
+            document.body.classList.add('manual-call-mode');
+            setTimeout(() => document.body.classList.remove('manual-call-mode'), 2000);
+            if (Notification.permission === "granted") new Notification("Glimpse Call", { body: "Broadcaster is calling you" });
+        }
+
+        let prev = null, score = 0, lastT = Date.now();
+        function process() {
+            if (remoteVideo.paused || remoteVideo.ended) { lastT = Date.now(); setTimeout(process, 33); return; }
+            
+            const nowTime = Date.now();
+            if (nowTime < gracePeriodEnd) {
+                updateSilenceBtn();
+            } else if (gracePeriodEnd > 0) {
+                gracePeriodEnd = 0; 
+                updateSilenceBtn(); 
+            }
+
+            if (remoteVideo.videoWidth > 0 && (canvas.width !== remoteVideo.videoWidth || canvas.height !== remoteVideo.videoHeight)) {
+                canvas.width = remoteVideo.videoWidth;
+                canvas.height = remoteVideo.videoHeight;
+                prev = null; 
+            }
+
+            const now = Date.now(); let dt = Math.min(now - lastT, 1000); lastT = now;
+            ctx.drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let moving = 0;
+            
+            if (prev) {
+                for (let y = 0; y < canvas.height; y += 20) {
+                    for (let x = 0; x < canvas.width; x += 20) {
+                        let diff = 0;
+                        for (let by = 0; by < 20; by += 2) {
+                            for (let bx = 0; bx < 20; bx += 2) {
+                                const i = ((y + by) * canvas.width + (x + bx)) * 4;
+                                if (Math.abs(data[i] - prev[i]) + Math.abs(data[i+1] - prev[i+1]) + Math.abs(data[i+2] - prev[i+2]) > 35) diff++;
+                            }
+                        }
+                        if (diff > 4) { moving++; ctx.strokeStyle = 'rgba(16, 185, 129, 0.8)'; ctx.strokeRect(x, y, 20, 20); }
+                    }
+                }
+            }
+            
+            prev = new Uint8ClampedArray(data);
+            
+            if (moving > 0) { score += dt; if (score > 1000) { triggerMotion(); score = 0; } }
+            else { score = Math.max(0, score - dt * 0.5); }
+            
+            setTimeout(process, 33);
+        }
+    </script>
 </body>
 </html>
