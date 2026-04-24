@@ -52,9 +52,14 @@
         const statusEl = document.getElementById('status');
         const ringBtn = document.getElementById('ring-btn');
         let dataConn = null;
+        let currentCall = null;
         let isAvail = true;
         let localStream = null;
+
         let isRetrying = false;
+        let retryCount = 0;
+        let retryTimer = null;
+        const MAX_RETRIES = 10;
 
         const peer = new Peer();
 
@@ -84,7 +89,6 @@
                     .catch(handleError);
             } else {
                 const legacyGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
-
                 if (legacyGetUserMedia) {
                     legacyGetUserMedia.call(navigator, constraints, handleSuccess, handleError);
                 } else {
@@ -104,59 +108,90 @@
             if (isRetrying) return;
             isRetrying = true;
 
-            statusEl.innerText = "Glimpse Monitor Disconnected - Retrying...";
-            statusEl.className = "status";
-            ringBtn.disabled = true;
-
             if (dataConn) {
                 dataConn.close();
                 dataConn = null;
             }
+            if (currentCall) {
+                currentCall.close();
+                currentCall = null;
+            }
 
-            setTimeout(() => {
+            ringBtn.disabled = true;
+
+            if (retryCount >= MAX_RETRIES) {
+                statusEl.innerText = "Connection Failed. Refresh to try again.";
+                statusEl.style.color = "#ef4444";
+                statusEl.className = "status";
+                return;
+            }
+
+            retryCount++;
+            statusEl.innerText = `Retrying (${retryCount}/${MAX_RETRIES})...`;
+            statusEl.style.color = "";
+            statusEl.className = "status";
+
+            if (retryTimer) clearTimeout(retryTimer);
+
+            retryTimer = setTimeout(() => {
                 isRetrying = false;
                 attemptConnect();
             }, 3000);
         };
 
         function attemptConnect() {
-            if (isRetrying || !localStream) return;
+            if (isRetrying || !localStream || peer.destroyed) return;
 
-            statusEl.innerText = "Finding Glimpse Monitor...";
-            statusEl.className = "status";
+            if (peer.disconnected) {
+                peer.reconnect();
+            }
 
-            const call = peer.call(TARGET_ID, localStream);
+            if (retryCount === 0) {
+                statusEl.innerText = "Finding Glimpse Monitor...";
+                statusEl.style.color = "";
+                statusEl.className = "status";
+            }
+
+            currentCall = peer.call(TARGET_ID, localStream);
             dataConn = peer.connect(TARGET_ID);
 
-            dataConn.on('open', () => {
-                statusEl.innerText = "Connected";
-                statusEl.className = "status status-connected";
-                ringBtn.disabled = false;
-            });
+            if (dataConn) {
+                dataConn.on('open', () => {
+                    retryCount = 0;
+                    statusEl.innerText = "Connected";
+                    statusEl.style.color = "";
+                    statusEl.className = "status status-connected";
+                    ringBtn.disabled = false;
+                });
 
-            dataConn.on('data', data => {
-                if (data === 'set-unavailable') {
-                    isAvail = false;
-                    ringBtn.classList.add('unavailable');
-                    ringBtn.innerText = "Viewer Unavailable";
-                } else if (data === 'set-available') {
-                    isAvail = true;
-                    ringBtn.classList.remove('unavailable');
-                    ringBtn.innerText = "Ring Viewer";
+                dataConn.on('data', data => {
+                    if (data === 'set-unavailable') {
+                        isAvail = false;
+                        ringBtn.classList.add('unavailable');
+                        ringBtn.innerText = "Viewer Unavailable";
+                    } else if (data === 'set-available') {
+                        isAvail = true;
+                        ringBtn.classList.remove('unavailable');
+                        ringBtn.innerText = "Ring Viewer";
+                    }
+                });
+
+                dataConn.on('close', handleDrop);
+                dataConn.on('error', handleDrop);
+            }
+
+            if (currentCall) {
+                if (currentCall.peerConnection) {
+                    var pc = currentCall.peerConnection;
+                    pc.addEventListener('iceconnectionstatechange', () => {
+                        if (pc && (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed')) {
+                            handleDrop();
+                        }
+                    });
                 }
-            });
-
-            call.peerConnection.addEventListener('iceconnectionstatechange', () => {
-                if (call.peerConnection.iceConnectionState === 'disconnected' || 
-                    call.peerConnection.iceConnectionState === 'failed') {
-                    handleDrop();
-                }
-            });
-
-            dataConn.on('close', handleDrop);
-            dataConn.on('error', handleDrop);
-            call.on('close', handleDrop);
-            call.on('error', handleDrop);
+                currentCall.on('close', handleDrop);
+                currentCall.on('error', handleDrop);
+            }
         }
 
         function sendRing() {
