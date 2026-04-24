@@ -14,7 +14,7 @@
         }
         body {
             font-family: -apple-system, sans-serif; background: var(--bg-dark); color: var(--text-main);
-            margin: 0; min-height: 100vh; transition: background-color 0.4s ease;
+            margin: 0; height: 100vh; overflow: hidden; transition: background-color 0.4s ease;
         }
 
         #setup-screen {
@@ -29,11 +29,8 @@
         #qrcode { background: white; padding: 15px; border-radius: 10px; display: inline-block; margin-bottom: 25px; }
         .instruction { color: var(--text-muted); font-size: 1em; line-height: 1.5; }
 
-        /* --- VIEWER SCREEN STYLES --- */
         #viewer-screen {
-            display: none; flex-direction: column;
-            height: 100vh; /* Lock height to prevent scroll */
-            overflow: hidden;
+            display: none; flex-direction: column; height: 100vh; overflow: hidden;
         }
         header {
             position: relative; background: var(--bg-card); border-bottom: 1px solid var(--border);
@@ -50,30 +47,17 @@
 
         .viewer-main {
             flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px; overflow: hidden; /* Keeps child elements contained */
+            padding: 20px; overflow: hidden;
         }
 
-        /* MODERN VIDEO BEZEL */
         .video-wrapper {
-            background: #0a0c10;
-            border: 1px solid #2a3140;
-            border-radius: 12px;
+            background: #0a0c10; border: 1px solid #2a3140; border-radius: 8px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-            padding: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            max-width: 1400px;
-            height: 100%; /* Flexes to fill available space */
-            max-height: 100%;
-            box-sizing: border-box;
-            transition: all 0.3s ease;
+            padding: 3px; display: inline-block; box-sizing: border-box; transition: all 0.3s ease;
         }
         canvas {
-            border-radius: 6px; background: #000;
-            max-width: 100%; max-height: 100%;
-            object-fit: contain; /* PERFECT SCALING */
+            border-radius: 5px; background: #000; max-width: 95vw; max-height: 65vh;
+            width: auto; height: auto; display: block;
         }
         video { position: absolute; opacity: 0.01; width: 10px; z-index: -1; }
 
@@ -82,18 +66,11 @@
         .btn-t.active { background: var(--accent); color: white; }
         .btn-t.danger { background: #ef4444; color: white; }
 
-        /* SUBDUED ALERT VISUALS APPLIED TO WRAPPER */
         .alert-mode { background-color: #1a0f0f !important; }
-        .alert-mode .video-wrapper {
-            border-color: #cc3333;
-            box-shadow: 0 0 0 2px #cc3333, 0 0 30px rgba(204, 51, 51, 0.2);
-        }
+        .alert-mode .video-wrapper { border-color: #cc3333; box-shadow: 0 0 0 2px #cc3333, 0 0 30px rgba(204, 51, 51, 0.2); }
 
         .manual-call-mode { background-color: #1a150a !important; }
-        .manual-call-mode .video-wrapper {
-            border-color: #d97706;
-            box-shadow: 0 0 0 2px #d97706, 0 0 30px rgba(217, 119, 6, 0.2);
-        }
+        .manual-call-mode .video-wrapper { border-color: #d97706; box-shadow: 0 0 0 2px #d97706, 0 0 30px rgba(217, 119, 6, 0.2); }
     </style>
 </head>
 <body>
@@ -119,7 +96,7 @@
         <div class="viewer-main">
             <video id="remote-video" autoplay playsinline muted></video>
             <div class="video-wrapper">
-                <canvas id="display-canvas" width="800" height="600"></canvas>
+                <canvas id="display-canvas"></canvas>
             </div>
             <div id="bottom-bar" class="bottom-bar">
                 <button id="btn-avail" class="btn-t" onclick="toggleAvail()">Mark as Unavailable</button>
@@ -129,19 +106,41 @@
     </div>
 
     <script>
-        function genId(len) {
-            const arr = new Uint8Array(len); window.crypto.getRandomValues(arr);
-            return Array.from(arr, b => b.toString(36).padStart(2, '0')).join('').substring(0, len);
-        }
-        let myId = localStorage.getItem('glimpseDynamicId');
-        if (!myId) {
-            myId = genId(12);
-            localStorage.setItem('glimpseDynamicId', myId);
+        let interactionDone = false;
+        function handleInteraction() {
+            if (interactionDone) return;
+            interactionDone = true;
+            try { new (window.AudioContext || window.webkitAudioContext)().resume(); } catch(e){}
+            const notifBtn = document.getElementById('btn-notif');
+            if (notifBtn) notifBtn.style.display = 'none';
         }
 
-        const currentUrl = window.location.href.split('#')[0].split('?')[0];
-        const basePath = currentUrl.substring(0, currentUrl.lastIndexOf("/"));
-        const link = `${basePath}/broadcaster.html#${myId}`;
+        document.addEventListener('click', handleInteraction);
+        document.addEventListener('touchstart', handleInteraction);
+
+        function enableNotifs() {
+            if ("Notification" in window) Notification.requestPermission();
+            handleInteraction();
+        }
+
+        function genId(len) {
+            if (window.crypto && window.crypto.getRandomValues) {
+                const arr = new Uint8Array(len); window.crypto.getRandomValues(arr);
+                return Array.from(arr, b => b.toString(36).padStart(2, '0')).join('').substring(0, len);
+            }
+            return Math.random().toString(36).substring(2, len + 2);
+        }
+
+        let myId = genId(12);
+        try {
+            const stored = localStorage.getItem('glimpseDynamicId');
+            if (stored) { myId = stored; }
+            else { localStorage.setItem('glimpseDynamicId', myId); }
+        } catch(e) {
+            console.warn("Storage restricted. Using temporary ID.");
+        }
+
+        const link = new URL('broadcaster.html#' + myId, window.location.href).href;
 
         new QRCode(document.getElementById("qrcode"), {
             text: link, width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L
@@ -153,8 +152,7 @@
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const statusEl = document.getElementById('status');
 
-        let dataConn = null, isSilenced = false, isAvail = true;
-        let gracePeriodEnd = 0;
+        let dataConn = null, isSilenced = false, isAvail = true, gracePeriodEnd = 0;
 
         function handleDisconnect() {
             statusEl.innerText = "Waiting for Broadcaster";
@@ -167,29 +165,20 @@
             call.on('stream', s => {
                 document.getElementById('setup-screen').style.display = 'none';
                 document.getElementById('viewer-screen').style.display = 'flex';
-
                 statusEl.innerText = "Broadcaster Connected";
                 statusEl.className = "status status-connected";
-
                 remoteVideo.srcObject = s;
                 gracePeriodEnd = Date.now() + 30000;
                 updateSilenceBtn();
-
                 remoteVideo.onloadedmetadata = () => {
                     canvas.width = remoteVideo.videoWidth;
                     canvas.height = remoteVideo.videoHeight;
                     setTimeout(process, 33);
                 };
             });
-
-            // Instant drop detection via WebRTC ICE state
             call.peerConnection.addEventListener('iceconnectionstatechange', () => {
-                if (call.peerConnection.iceConnectionState === 'disconnected' ||
-                    call.peerConnection.iceConnectionState === 'failed') {
-                    handleDisconnect();
-                }
+                if (call.peerConnection.iceConnectionState === 'disconnected' || call.peerConnection.iceConnectionState === 'failed') handleDisconnect();
             });
-
             call.on('close', handleDisconnect);
         });
 
@@ -200,24 +189,9 @@
         });
 
         function reset() {
-            localStorage.removeItem('glimpseDynamicId');
+            try { localStorage.removeItem('glimpseDynamicId'); } catch(e){}
             window.location.reload();
         }
-
-        function checkNotificationStatus() {
-            if ("Notification" in window && Notification.permission === "granted") {
-                document.getElementById('btn-notif').style.display = 'none';
-            }
-        }
-
-        function enableNotifs() {
-            if ("Notification" in window) {
-                Notification.requestPermission().then(permission => { checkNotificationStatus(); });
-            }
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume();
-        }
-
-        checkNotificationStatus();
 
         function toggleAvail() {
             isAvail = !isAvail; const b = document.getElementById('btn-avail');
@@ -227,32 +201,18 @@
         }
 
         function updateSilenceBtn() {
-            const b = document.getElementById('btn-silence');
-            const now = Date.now();
-
+            const b = document.getElementById('btn-silence'), now = Date.now();
             if (now < gracePeriodEnd) {
-                const sec = Math.ceil((gracePeriodEnd - now) / 1000);
-                b.innerText = `Motion Alerts in ${sec}s`;
-                b.classList.add('danger');
+                b.innerText = `Motion Alerts in ${Math.ceil((gracePeriodEnd - now) / 1000)}s`; b.classList.add('danger');
             } else {
-                if (isSilenced) {
-                    b.innerText = "Unsilence Alerts";
-                    b.classList.add('danger');
-                } else {
-                    b.innerText = "Silence Motion Alerts";
-                    b.classList.remove('danger');
-                }
+                b.innerText = isSilenced ? "Unsilence Alerts" : "Silence Motion Alerts";
+                if (isSilenced) b.classList.add('danger'); else b.classList.remove('danger');
             }
         }
 
         function toggleSilence() {
-            const now = Date.now();
-            if (now < gracePeriodEnd) {
-                gracePeriodEnd = 0;
-                isSilenced = false;
-            } else {
-                isSilenced = !isSilenced;
-            }
+            if (Date.now() < gracePeriodEnd) { gracePeriodEnd = 0; isSilenced = false; }
+            else { isSilenced = !isSilenced; }
             updateSilenceBtn();
         }
 
@@ -265,49 +225,38 @@
         let lastN = 0;
         function triggerMotion() {
             const now = Date.now();
-            if (now < gracePeriodEnd) return;
-
-            if (now - lastN > 5000) {
-                if (!isSilenced) {
-                    beep(1, 800); setTimeout(() => beep(1, 800), 300);
-                    if (Notification.permission === "granted") new Notification("Glimpse Alert", { body: "Motion detected" });
-                }
-                document.body.classList.add('alert-mode');
-                setTimeout(() => document.body.classList.remove('alert-mode'), 1500);
-                lastN = now;
+            if (now < gracePeriodEnd || now - lastN < 5000) return;
+            if (!isSilenced) {
+                beep(1, 800); setTimeout(() => beep(1, 800), 300);
+                if (Notification.permission === "granted") new Notification("Glimpse", { body: "Motion detected" });
             }
+            document.body.classList.add('alert-mode'); setTimeout(() => document.body.classList.remove('alert-mode'), 1500);
+            lastN = now;
         }
 
         function triggerManual() {
             beep(1, 1000); setTimeout(() => beep(1, 1000), 250); setTimeout(() => beep(1, 1000), 500);
-            document.body.classList.add('manual-call-mode');
-            setTimeout(() => document.body.classList.remove('manual-call-mode'), 2000);
-            if (Notification.permission === "granted") new Notification("Glimpse Call", { body: "Broadcaster is calling you" });
+            document.body.classList.add('manual-call-mode'); setTimeout(() => document.body.classList.remove('manual-call-mode'), 2000);
         }
 
-        let prev = null, score = 0, lastT = Date.now();
+        let prev = null, motionFrames = 0, lastT = Date.now();
+
         function process() {
             if (remoteVideo.paused || remoteVideo.ended) { lastT = Date.now(); setTimeout(process, 33); return; }
-            
-            const nowTime = Date.now();
-            if (nowTime < gracePeriodEnd) {
-                updateSilenceBtn();
-            } else if (gracePeriodEnd > 0) {
-                gracePeriodEnd = 0; 
-                updateSilenceBtn(); 
-            }
+
+            if (Date.now() < gracePeriodEnd) updateSilenceBtn();
+            else if (gracePeriodEnd > 0) { gracePeriodEnd = 0; updateSilenceBtn(); }
 
             if (remoteVideo.videoWidth > 0 && (canvas.width !== remoteVideo.videoWidth || canvas.height !== remoteVideo.videoHeight)) {
-                canvas.width = remoteVideo.videoWidth;
-                canvas.height = remoteVideo.videoHeight;
-                prev = null; 
+                canvas.width = remoteVideo.videoWidth; canvas.height = remoteVideo.videoHeight; prev = null;
             }
 
-            const now = Date.now(); let dt = Math.min(now - lastT, 1000); lastT = now;
+            lastT = Date.now();
+
             ctx.drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
             const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
             let moving = 0;
-            
+
             if (prev) {
                 for (let y = 0; y < canvas.height; y += 20) {
                     for (let x = 0; x < canvas.width; x += 20) {
@@ -322,12 +271,25 @@
                     }
                 }
             }
-            
+
             prev = new Uint8ClampedArray(data);
-            
-            if (moving > 0) { score += dt; if (score > 1000) { triggerMotion(); score = 0; } }
-            else { score = Math.max(0, score - dt * 0.5); }
-            
+
+            let totalBlocks = Math.floor(canvas.width / 20) * Math.floor(canvas.height / 20);
+
+            let isBg = document.hidden;
+            let minBlocks = isBg ? Math.max(10, totalBlocks * 0.05) : 2;
+            let targetFrames = isBg ? 3 : 10;
+
+            if (moving > minBlocks && moving < totalBlocks * 0.5) {
+                motionFrames++;
+                if (motionFrames >= targetFrames) {
+                    triggerMotion();
+                    motionFrames = 0;
+                }
+            } else {
+                motionFrames = 0;
+            }
+
             setTimeout(process, 33);
         }
     </script>

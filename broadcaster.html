@@ -12,16 +12,16 @@
             --accent: #3b82f6; --accent-hover: #2563eb;
             --green: #10b981; --warning: #f59e0b; --border: #334155;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
         header { background: var(--header); border-bottom: 1px solid var(--border); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; position: relative; }
         .brand { font-weight: 600; font-size: 1.2em; }
         .status { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.95em; color: var(--warning); white-space: nowrap; }
         .status-connected { color: var(--green); }
-        main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; overflow: hidden; }
 
-        video { width: 40%; max-width: 350px; border-radius: 10px; background: #000; margin-bottom: 40px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+        video { width: 45%; max-width: 350px; border-radius: 10px; background: #000; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
 
-        .btn-ring { background: var(--accent); color: white; padding: 35px 20px; font-size: 2.2em; border: none; border-radius: 15px; width: 90%; max-width: 500px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .btn-ring { background: var(--accent); color: white; padding: 20px 20px; font-size: 1.8em; border: none; border-radius: 12px; width: 90%; max-width: 500px; cursor: pointer; font-weight: 600; transition: 0.2s; }
         .btn-ring:hover:not(:disabled):not(.unavailable) { background: var(--accent-hover); transform: translateY(-3px); }
         .btn-ring:disabled, .btn-ring.unavailable { background: #334155; color: var(--muted); cursor: not-allowed; transform: none; }
     </style>
