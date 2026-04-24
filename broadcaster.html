@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Broadcaster - Motion Monitor</title>
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #121418; --header-bg: #1e2126; --text-main: #f1f5f9; --text-muted: #94a3b8;
+            --accent-blue: #3b82f6; --accent-hover: #2563eb; --accent-green: #10b981; 
+            --accent-warning: #f59e0b; --border: #334155; --btn-disabled: #475569;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; display: flex; flex-direction: column; min-height: 100vh; box-sizing: border-box; }
+        
+        header { background: var(--header-bg); border-bottom: 1px solid var(--border); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .brand { font-weight: 600; font-size: 1.2em; letter-spacing: -0.5px; }
+        .status-text { font-size: 0.95em; font-weight: 500; color: var(--accent-warning); }
+        .status-connected { color: var(--accent-green); }
+        .status-error { color: #ef4444; }
+
+        main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        
+        video { width: 100%; max-width: 400px; border-radius: 8px; background: #000; margin-bottom: 40px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+        
+        .btn-ring { background: var(--accent-blue); color: white; padding: 25px 20px; font-size: 1.8em; border: none; border-radius: 12px; width: 100%; max-width: 400px; cursor: pointer; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .btn-ring:hover:not(:disabled):not(.unavailable) { background: var(--accent-hover); transform: translateY(-2px); }
+        .btn-ring:disabled, .btn-ring.unavailable { background: var(--btn-disabled); color: var(--text-muted); cursor: not-allowed; box-shadow: none; transform: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">Broadcaster</div>
+        <div id="status-text" class="status-text">Initializing...</div>
+    </header>
+
+    <main>
+        <video id="local-video" autoplay playsinline muted></video>
+        <button id="ring-btn" class="btn-ring" onclick="sendManualAlert()" disabled>Ring Viewer</button>
+    </main>
+
+    <script>
+        const TARGET_VIEWER_ID = window.location.hash.substring(1);
+        
+        if (window.location.hash) {
+            window.history.replaceState(null, null, window.location.pathname);
+        }
+
+        const localVideo = document.getElementById('local-video');
+        const statusText = document.getElementById('status-text');
+        const ringBtn = document.getElementById('ring-btn');
+        
+        let localStream = null;
+        let dataConnection = null;
+        let peer = null;
+        let isViewerAvailable = true;
+        let activeCall = null;
+
+        if (!TARGET_VIEWER_ID) {
+            statusText.innerText = "Missing ID. Scan QR code on Viewer.";
+            statusText.className = "status-text status-error";
+        } else {
+            peer = new Peer(); 
+            startCameraAndConnect();
+        }
+
+        function startCameraAndConnect() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
+                .then(stream => {
+                    localStream = stream;
+                    localVideo.srcObject = stream;
+                    statusText.innerText = "Finding Viewer...";
+                    attemptAutoConnect();
+                })
+                .catch(err => {
+                    statusText.innerText = "Camera access denied.";
+                    statusText.className = "status-text status-error";
+                });
+        }
+
+        function isAuthorized(incomingId) {
+            return incomingId === TARGET_VIEWER_ID;
+        }
+
+        peer.on('call', call => {
+            if (!isAuthorized(call.peer) || activeCall) {
+                console.warn("Security: Rejected unauthorized or duplicate call attempt.");
+                call.close();
+                return;
+            }
+            
+            activeCall = call;
+            call.answer(); 
+        });
+
+        function attemptAutoConnect() {
+            if (!localStream) return;
+
+            const call = peer.call(TARGET_VIEWER_ID, localStream);
+            dataConnection = peer.connect(TARGET_VIEWER_ID);
+
+            dataConnection.on('open', () => {
+                statusText.innerText = "Connected";
+                statusText.className = "status-text status-connected";
+                ringBtn.disabled = false; 
+                ringBtn.classList.remove('unavailable');
+                ringBtn.innerText = "Ring Viewer";
+                isViewerAvailable = true;
+            });
+
+            dataConnection.on('data', data => {
+                if (data === 'set-unavailable') {
+                    isViewerAvailable = false;
+                    ringBtn.classList.add('unavailable');
+                    ringBtn.innerText = "Viewer Unavailable";
+                } else if (data === 'set-available') {
+                    isViewerAvailable = true;
+                    ringBtn.classList.remove('unavailable');
+                    ringBtn.innerText = "Ring Viewer";
+                }
+            });
+
+            dataConnection.on('close', () => {
+                activeCall = null;
+                scheduleRetry();
+            });
+            
+            dataConnection.on('error', scheduleRetry);
+        }
+
+        function scheduleRetry() {
+            statusText.innerText = "Retrying connection...";
+            statusText.className = "status-text";
+            ringBtn.disabled = true; 
+            setTimeout(attemptAutoConnect, 3000); 
+        }
+
+        function sendManualAlert() {
+            if (!isViewerAvailable) return;
+            if (dataConnection && dataConnection.open) {
+                dataConnection.send('manual-alert'); 
+                ringBtn.innerText = "Ringing...";
+                setTimeout(() => ringBtn.innerText = "Ring Viewer", 2000);
+            }
+        }
+    </script>
+</body>
+</html>
