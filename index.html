@@ -28,20 +28,21 @@
         }
 
         #setup-screen {
-            display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 20px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 15px;
         }
-        h1 { margin-bottom: 8px; font-weight: 600; font-size: 2.5em; letter-spacing: -1px; }
-        p.subtitle { margin-top: 0; margin-bottom: 40px; color: var(--text-muted); font-size: 1.1em; }
+        h1 { margin-top: 0; margin-bottom: 5px; font-weight: 600; font-size: 2.2em; letter-spacing: -1px; }
+        p.subtitle { margin-top: 0; margin-bottom: 20px; color: var(--text-muted); font-size: 1em; }
         .card {
-            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 40px;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 25px;
             display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 250px;
         }
-        #qrcode { background: white; padding: 15px; border-radius: 10px; display: inline-block; margin-bottom: 25px; }
-        .instruction { color: var(--text-muted); font-size: 1em; line-height: 1.5; }
+        #qrcode { background: white; padding: 12px; border-radius: 10px; display: inline-block; margin-bottom: 15px; }
+        .instruction { color: var(--text-muted); font-size: 0.95em; line-height: 1.4; }
 
         #viewer-screen {
             display: none; flex-direction: column; min-height: 100vh;
         }
+
         header {
             position: relative; background: var(--bg-card); border-bottom: 1px solid var(--border);
             padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
@@ -51,17 +52,22 @@
             header { padding-top: calc(12px + env(safe-area-inset-top)); }
         }
 
-        .brand { font-weight: 600; font-size: 1.2em; }
-        .status { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.95em; font-weight: 500; color: var(--warning); white-space: nowrap; }
-        .status-connected { color: var(--green); }
-        .controls { display: flex; gap: 10px; }
+        .status-container { flex: 1; display: flex; justify-content: flex-start; }
+        .controls { flex: 1; display: flex; justify-content: flex-end; gap: 10px; }
+        .brand { font-weight: 600; font-size: 1.2em; position: absolute; left: 50%; transform: translateX(-50%); }
+        .status { font-size: 0.95em; font-weight: 500; color: var(--warning); white-space: nowrap; }
+
         button { font-weight: 500; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: 0.2s; }
         .btn-p { background: var(--accent); color: white; }
         .btn-s { background: transparent; color: var(--text-main); border: 1px solid var(--border); }
 
-        @media (max-width: 650px) {
-            header { flex-wrap: wrap; padding: 15px; }
-            .status { position: static; transform: none; width: 100%; text-align: center; margin-top: 15px; order: 3; }
+        button:disabled { background: var(--border) !important; color: var(--text-muted) !important; cursor: default; }
+
+        @media (max-width: 700px) {
+            header { flex-direction: column; gap: 12px; padding: 15px; }
+            .brand { position: static; transform: none; order: 1; }
+            .controls { flex: unset; width: 100%; justify-content: center; order: 2; flex-wrap: wrap; }
+            .status-container { flex: unset; width: 100%; justify-content: center; order: 3; }
         }
 
         .viewer-main {
@@ -78,7 +84,6 @@
             border-radius: 5px; background: #000; max-width: 100%; max-height: 65vh;
             width: auto; height: auto; display: block;
         }
-
         video { position: fixed; right: 200%; bottom: 200%; width: 10px; z-index: -1; }
 
         .bottom-bar {
@@ -116,10 +121,12 @@
 
     <div id="viewer-screen">
         <header>
+            <div class="status-container">
+                <div id="status" class="status">Waiting for Broadcaster</div>
+            </div>
             <div class="brand">Glimpse</div>
-            <div id="status" class="status">Waiting for Broadcaster</div>
             <div class="controls">
-                <button id="btn-notif" class="btn-p" onclick="enableNotifs()">Enable notifications</button>
+                <button id="btn-notif" class="btn-p" onclick="enableAudioAndNotifs()">Enable notifications</button>
                 <button class="btn-s" onclick="reset()">New connection</button>
             </div>
         </header>
@@ -145,9 +152,10 @@
         let globalAudioCtx = null;
         let interactionDone = false;
 
-        function handleInteraction() {
+        function enableAudioAndNotifs() {
             if (interactionDone) return;
             interactionDone = true;
+
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 globalAudioCtx = new AudioContext();
@@ -160,18 +168,15 @@
                 globalAudioCtx.resume();
             } catch(e) { console.warn("Audio setup failed:", e); }
 
-            const notifBtn = document.getElementById('btn-notif');
-            if (notifBtn) notifBtn.style.display = 'none';
-        }
-
-        document.addEventListener('click', handleInteraction);
-        document.addEventListener('touchstart', handleInteraction);
-
-        function enableNotifs() {
             try {
                 if ("Notification" in window) Notification.requestPermission();
             } catch(e) {}
-            handleInteraction();
+
+            const notifBtn = document.getElementById('btn-notif');
+            if (notifBtn) {
+                notifBtn.innerText = "Audio Enabled";
+                notifBtn.disabled = true;
+            }
         }
 
         function genId(len) {
@@ -194,7 +199,7 @@
         const link = new URL('broadcaster.html#' + myId, window.location.href).href;
 
         new QRCode(document.getElementById("qrcode"), {
-            text: link, width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L
+            text: link, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L
         });
 
         const peer = new Peer(myId);
@@ -206,8 +211,8 @@
         let dataConn = null, isSilenced = false, isAvail = true, gracePeriodEnd = 0, lastN = 0, isCountingDown = false;
 
         function handleDisconnect() {
+            statusEl.style.display = "block";
             statusEl.innerText = "Waiting for Broadcaster";
-            statusEl.className = "status";
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
@@ -216,8 +221,8 @@
             call.on('stream', s => {
                 document.getElementById('setup-screen').style.display = 'none';
                 document.getElementById('viewer-screen').style.display = 'flex';
-                statusEl.innerText = "Broadcaster Connected";
-                statusEl.className = "status status-connected";
+
+                statusEl.style.display = "none";
 
                 remoteVideo.srcObject = s;
                 remoteVideo.play().catch(e => console.warn("Auto-play blocked:", e));
