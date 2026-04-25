@@ -1,0 +1,21 @@
+{
+  "name": "Glimpse Monitor",
+  "short_name": "Glimpse",
+  "description": "Local video monitoring",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#121418",
+  "theme_color": "#121418",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
