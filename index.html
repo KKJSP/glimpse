@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Glimpse</title>
 
     <link rel="icon" type="image/png" href="icons/favicon192.png">
@@ -22,135 +22,185 @@
             --bg-dark: #121418; --bg-card: #1e2126; --text-main: #f1f5f9; --text-muted: #94a3b8;
             --accent: #3b82f6; --green: #10b981; --warning: #f59e0b; --border: #334155;
         }
+
         body {
             font-family: -apple-system, sans-serif; background: var(--bg-dark); color: var(--text-main);
-            margin: 0; min-height: 100vh; overflow-x: hidden; transition: background-color 0.4s ease;
+            margin: 0; position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: 100dvh; width: 100dvw;
+            overflow: hidden; transition: background-color 0.4s ease;
         }
 
-        #setup-screen {
-            display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 15px;
-        }
-        h1 { margin-top: 0; margin-bottom: 5px; font-weight: 600; font-size: 2.2em; letter-spacing: -1px; }
-        p.subtitle { margin-top: 0; margin-bottom: 20px; color: var(--text-muted); font-size: 1em; }
-        .card {
-            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 25px;
-            display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 250px;
-        }
-        #qrcode { background: white; padding: 12px; border-radius: 10px; display: inline-block; margin-bottom: 15px; }
-        .instruction { color: var(--text-muted); font-size: 0.95em; line-height: 1.4; }
+        .anim-element { transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), top 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
 
-        #viewer-screen {
-            display: none; flex-direction: column; min-height: 100vh;
-        }
+        /* --- SETUP LAYOUT --- */
+        #shared-glimpse { position: absolute; margin: 0; font-weight: 600; letter-spacing: -1px; z-index: 100; }
 
+        .glimpse-center { top: 30dvh; left: 50%; transform: translate(-50%, -50%) scale(2.5); }
+        .glimpse-top { top: 32px; left: 50%; transform: translate(-50%, -50%) scale(1.2); }
+        @supports (padding-top: env(safe-area-inset-top)) { .glimpse-top { top: calc(32px + env(safe-area-inset-top)); } }
+
+        #setup-content { position: absolute; top: calc(30dvh + 60px); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .setup-visible { transform: translateY(0); opacity: 1; pointer-events: auto;}
+        .setup-hidden { transform: translateY(100dvh); opacity: 0; pointer-events: none;}
+
+        p.subtitle { margin-top: 0; margin-bottom: 25px; color: var(--text-muted); font-size: 1.1em; text-align: center;}
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 250px; min-height: 200px; justify-content: center; }
+
+        #qrcode { background: white; padding: 12px; border-radius: 10px; display: inline-block; margin-bottom: 15px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        #qrcode:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
+        .instruction { color: var(--text-muted); font-size: 0.95em; line-height: 1.4; text-align: center; }
+
+        /* --- HEADER & CONTROLS --- */
         header {
-            position: relative; background: var(--bg-card); border-bottom: 1px solid var(--border);
-            padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            z-index: 10;
+            position: absolute; top: 0; left: 0; width: 100%; height: 65px;
+            background: var(--bg-card); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 10; box-sizing: border-box;
         }
-        @supports (padding-top: env(safe-area-inset-top)) {
-            header { padding-top: calc(12px + env(safe-area-inset-top)); }
-        }
+        @supports (padding-top: env(safe-area-inset-top)) { header { height: calc(65px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); } }
 
-        .status-container { flex: 1; display: flex; justify-content: flex-start; }
-        .controls { flex: 1; display: flex; justify-content: flex-end; gap: 10px; }
-        .brand { font-weight: 600; font-size: 1.2em; position: absolute; left: 50%; transform: translateX(-50%); }
-        .status { font-size: 0.95em; font-weight: 500; color: var(--warning); white-space: nowrap; }
+        .status-container { position: absolute; left: 25px; z-index: 11; top: 23px; }
+        .status { font-size: 0.95em; font-weight: 500; color: var(--warning); white-space: nowrap; opacity: 0; transition: opacity 0.3s; }
 
-        button { font-weight: 500; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: 0.2s; }
+        #header-controls { position: absolute; right: 25px; top: 15px; display: flex; gap: 10px; z-index: 11; }
+        .controls-hidden { transform: translateX(120vw); }
+        .controls-visible { transform: translateX(0); }
+
+        button { font-weight: 500; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: background 0.2s; white-space: nowrap; }
         .btn-p { background: var(--accent); color: white; }
         .btn-s { background: transparent; color: var(--text-main); border: 1px solid var(--border); }
-
         button:disabled { background: var(--border) !important; color: var(--text-muted) !important; cursor: default; }
 
-        @media (max-width: 700px) {
-            header { flex-direction: column; gap: 12px; padding: 15px; }
-            .brand { position: static; transform: none; order: 1; }
-            .controls { flex: unset; width: 100%; justify-content: center; order: 2; flex-wrap: wrap; }
-            .status-container { flex: unset; width: 100%; justify-content: center; order: 3; }
+        /* --- VIEWER CONTENT --- */
+        #viewer-main {
+            position: absolute; top: 65px; bottom: 0; left: 0; width: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px; box-sizing: border-box;
         }
+        @supports (padding-top: env(safe-area-inset-top)) { #viewer-main { top: calc(65px + env(safe-area-inset-top)); } }
 
-        .viewer-main {
-            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px;
-        }
+        .viewer-hidden { transform: translateY(100dvh); pointer-events: none; }
+        .viewer-visible { transform: translateY(0); pointer-events: auto; }
 
+        .video-container { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
         .video-wrapper {
-            background: #0a0c10; border: 1px solid #2a3140; border-radius: 8px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-            padding: 3px; display: inline-block; box-sizing: border-box; transition: all 0.3s ease;
+            position: relative; background: #0a0c10; border: 1px solid #2a3140; border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+            padding: 3px; display: inline-flex; box-sizing: border-box; transition: all 0.3s ease; max-width: 100%; max-height: 100%;
         }
-        canvas {
-            border-radius: 5px; background: #000; max-width: 100%; max-height: 65vh;
-            width: auto; height: auto; display: block;
-        }
-        video { position: fixed; right: 200%; bottom: 200%; width: 10px; z-index: -1; }
+        canvas { border-radius: 5px; background: #000; max-width: 100%; max-height: 100%; width: auto; height: auto; display: block; object-fit: contain; }
+        video { position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -1; }
 
-        .bottom-bar {
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;
-            margin-top: 20px; z-index: 10; width: 100%; padding-bottom: 20px;
-        }
+        #play-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 20; border-radius: 8px; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
+        #play-overlay span { background: var(--accent); color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 1.1em; pointer-events: none; }
+
+        .bottom-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 25px; z-index: 10; width: 100%; flex-shrink: 0; }
         .btn-t { background: var(--border); color: var(--text-main); min-width: 180px; padding: 12px 16px; }
         .btn-t.active { background: var(--accent); color: white; }
         .btn-t.danger { background: #ef4444; color: white; }
 
-        .slider-group {
-            display: flex; align-items: center; gap: 12px; background: var(--bg-card);
-            border: 1px solid var(--border); padding: 8px 18px; border-radius: 6px;
-        }
+        .slider-group { display: flex; align-items: center; gap: 12px; background: var(--bg-card); border: 1px solid var(--border); padding: 8px 18px; border-radius: 6px; }
         .slider-group label { font-size: 0.85em; color: var(--text-muted); font-weight: 500; }
-        input[type="range"] { accent-color: var(--accent); cursor: pointer; width: 120px; }
+        input[type="range"] { accent-color: var(--accent); cursor: pointer; width: 100px; }
 
         .alert-mode { background-color: #1a0f0f !important; }
         .alert-mode .video-wrapper { border-color: #cc3333; box-shadow: 0 0 0 2px #cc3333, 0 0 30px rgba(204, 51, 51, 0.2); }
-
         .manual-call-mode { background-color: #1a150a !important; }
         .manual-call-mode .video-wrapper { border-color: #d97706; box-shadow: 0 0 0 2px #d97706, 0 0 30px rgba(217, 119, 6, 0.2); }
+
+        @media (max-width: 810px) {
+            .status-container { left: 0; top: 120px; width: 100%; text-align: center; }
+            .status { position: static; display: inline-block; }
+
+            #header-controls { top: 65px; right: 0; width: 100vw; justify-content: center; background: var(--bg-dark); padding: 10px 0; }
+            #viewer-main { top: 135px !important; }
+        }
+
+        @media (max-height: 500px) {
+            .glimpse-center { top: 100px; transform: translate(-50%, -50%) scale(1.5); }
+            #setup-content { top: 130px; }
+            .card { padding: 10px 20px; flex-direction: row; gap: 20px; border-radius: 12px; }
+            #qrcode { margin-bottom: 0; padding: 5px; }
+            #qrcode img, #qrcode canvas { width: 90px !important; height: 90px !important; }
+            p.subtitle { margin-bottom: 10px; font-size: 0.9em; }
+
+            #viewer-main { padding: 5px; top: 65px; }
+            .bottom-bar { margin-top: 10px; gap: 8px; }
+            .btn-t { min-width: 140px; padding: 8px 12px; font-size: 0.8em; }
+            .slider-group { padding: 5px 12px; }
+        }
     </style>
 </head>
 <body>
 
-    <div id="setup-screen">
-        <h1>Glimpse</h1>
+    <header></header>
+
+    <div class="status-container">
+        <div id="status" class="status">Waiting for Broadcaster</div>
+    </div>
+
+    <div id="header-controls" class="anim-element controls-hidden">
+        <button id="btn-notif" class="btn-p" onclick="enableAudioAndNotifs()">Enable notifications</button>
+        <button class="btn-s" onclick="reset()">New connection</button>
+    </div>
+
+    <h1 id="shared-glimpse" class="anim-element glimpse-center">Glimpse</h1>
+
+    <div id="setup-content" class="anim-element setup-visible">
         <p class="subtitle">Local video monitoring</p>
         <div class="card">
-            <div id="qrcode"></div>
+            <div id="qrcode" onclick="reset()" title="Click to generate a new QR code"></div>
             <div class="instruction">Scan the QR code with your camera device<br>to start the session.</div>
         </div>
     </div>
 
-    <div id="viewer-screen">
-        <header>
-            <div class="status-container">
-                <div id="status" class="status">Waiting for Broadcaster</div>
-            </div>
-            <div class="brand">Glimpse</div>
-            <div class="controls">
-                <button id="btn-notif" class="btn-p" onclick="enableAudioAndNotifs()">Enable notifications</button>
-                <button class="btn-s" onclick="reset()">New connection</button>
-            </div>
-        </header>
-        <div class="viewer-main">
-            <video id="remote-video" autoplay playsinline muted></video>
+    <div id="viewer-main" class="anim-element viewer-hidden">
+        <video id="remote-video" playsinline muted></video>
+        <div class="video-container">
             <div class="video-wrapper">
                 <canvas id="display-canvas"></canvas>
-            </div>
-            <div id="bottom-bar" class="bottom-bar">
-                <button id="btn-avail" class="btn-t" onclick="toggleAvail()">Mark as Unavailable</button>
-
-                <div class="slider-group">
-                    <label for="sens-slider">Sensitivity</label>
-                    <input type="range" id="sens-slider" min="0" max="100" value="80">
+                <div id="play-overlay" onclick="forcePlay()">
+                    <span>Click to Show Video</span>
                 </div>
-
-                <button id="btn-silence" class="btn-t danger" onclick="toggleSilence()">Starting Engine...</button>
             </div>
+        </div>
+        <div id="bottom-bar" class="bottom-bar">
+            <button id="btn-avail" class="btn-t" onclick="toggleAvail()">Mark as Unavailable</button>
+            <div class="slider-group">
+                <label for="sens-slider">Sensitivity</label>
+                <input type="range" id="sens-slider" min="0" max="100" value="80">
+            </div>
+            <button id="btn-silence" class="btn-t danger" onclick="toggleSilence()">Starting Engine...</button>
         </div>
     </div>
 
     <script>
         let globalAudioCtx = null;
         let interactionDone = false;
+        let isViewerMode = false;
+        let processLoopActive = false;
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'c' || e.key === 'C') && !isViewerMode) playForwardAnimation();
+        });
+
+        function playForwardAnimation() {
+            if (isViewerMode) return;
+            isViewerMode = true;
+            document.getElementById('status').style.opacity = '0';
+            document.getElementById('setup-content').className = 'anim-element setup-hidden';
+            document.getElementById('shared-glimpse').className = 'anim-element glimpse-top';
+            document.getElementById('header-controls').className = 'anim-element controls-visible';
+            document.getElementById('viewer-main').className = 'anim-element viewer-visible';
+        }
+
+        function playReverseAnimation(onComplete) {
+            if (!isViewerMode) return;
+            isViewerMode = false;
+            document.getElementById('status').style.opacity = '0';
+            document.getElementById('viewer-main').className = 'anim-element viewer-hidden';
+            document.getElementById('header-controls').className = 'anim-element controls-hidden';
+            document.getElementById('shared-glimpse').className = 'anim-element glimpse-center';
+            document.getElementById('setup-content').className = 'anim-element setup-visible';
+            if (onComplete) setTimeout(onComplete, 700);
+        }
 
         function enableAudioAndNotifs() {
             if (interactionDone) return;
@@ -160,23 +210,48 @@
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 globalAudioCtx = new AudioContext();
 
-                const osc = globalAudioCtx.createOscillator();
-                osc.connect(globalAudioCtx.destination);
-                osc.start(0);
-                osc.stop(globalAudioCtx.currentTime + 0.01);
+                // iOS Web Audio Hack - Keep a silent oscillator running indefinitely
+                const silentOsc = globalAudioCtx.createOscillator();
+                const silentGain = globalAudioCtx.createGain();
+                silentGain.gain.value = 0.001;
+                silentOsc.connect(silentGain);
+                silentGain.connect(globalAudioCtx.destination);
+                silentOsc.start();
 
-                globalAudioCtx.resume();
+                // Play a brief unlocking sound
+                const osc = globalAudioCtx.createOscillator();
+                const g = globalAudioCtx.createGain();
+                osc.connect(g); g.connect(globalAudioCtx.destination);
+                g.gain.value = 0;
+                osc.start(0);
+                g.gain.setTargetAtTime(0.1, globalAudioCtx.currentTime, 0.01);
+                g.gain.setTargetAtTime(0, globalAudioCtx.currentTime + 0.05, 0.01);
+                osc.stop(globalAudioCtx.currentTime + 0.1);
+
+                if (globalAudioCtx.state === 'suspended') {
+                    globalAudioCtx.resume();
+                }
             } catch(e) { console.warn("Audio setup failed:", e); }
 
-            try {
-                if ("Notification" in window) Notification.requestPermission();
-            } catch(e) {}
+            const remoteVideo = document.getElementById('remote-video');
+            if (remoteVideo.srcObject) forcePlay();
+
+            try { if ("Notification" in window) Notification.requestPermission(); } catch(e) {}
 
             const notifBtn = document.getElementById('btn-notif');
             if (notifBtn) {
                 notifBtn.innerText = "Audio Enabled";
                 notifBtn.disabled = true;
+                notifBtn.className = "btn-s";
             }
+        }
+
+        function forcePlay() {
+            const remoteVideo = document.getElementById('remote-video');
+            remoteVideo.play().then(() => {
+                document.getElementById('play-overlay').style.display = 'none';
+            }).catch(e => console.warn(e));
+            if(!interactionDone) enableAudioAndNotifs();
         }
 
         function genId(len) {
@@ -187,70 +262,94 @@
             return Math.random().toString(36).substring(2, len + 2);
         }
 
-        let myId = genId(12);
-        try {
-            const stored = localStorage.getItem('glimpseDynamicId');
-            if (stored) { myId = stored; }
-            else { localStorage.setItem('glimpseDynamicId', myId); }
-        } catch(e) {
-            console.warn("Storage restricted. Using temporary ID.");
-        }
-
-        const link = new URL('broadcaster.html#' + myId, window.location.href).href;
-
-        new QRCode(document.getElementById("qrcode"), {
-            text: link, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L
-        });
-
-        const peer = new Peer(myId);
         const remoteVideo = document.getElementById('remote-video');
         const canvas = document.getElementById('display-canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const statusEl = document.getElementById('status');
 
-        let dataConn = null, isSilenced = false, isAvail = true, gracePeriodEnd = 0, lastN = 0, isCountingDown = false;
+        let myId, peer = null, dataConn = null;
+        let isSilenced = false, isAvail = true, gracePeriodEnd = 0, lastN = 0, isCountingDown = false;
+
+        function initPeer() {
+            myId = genId(12);
+            try {
+                const stored = localStorage.getItem('glimpseDynamicId');
+                if (stored) { myId = stored; } else { localStorage.setItem('glimpseDynamicId', myId); }
+            } catch(e) {}
+
+            const link = new URL('broadcaster.html#' + myId, window.location.href).href;
+            document.getElementById("qrcode").innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), {
+                text: link, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L
+            });
+
+            // Reverted to pure local connection without STUN servers
+            peer = new Peer(myId);
+
+            peer.on('call', call => {
+                call.answer();
+                call.on('stream', s => {
+                    playForwardAnimation();
+
+                    remoteVideo.srcObject = s;
+                    remoteVideo.play().then(() => {
+                        document.getElementById('play-overlay').style.display = 'none';
+                    }).catch(e => {
+                        console.warn("Auto-play blocked by browser");
+                        document.getElementById('play-overlay').style.display = 'flex';
+                    });
+
+                    gracePeriodEnd = Date.now() + 30000;
+                    updateSilenceBtn();
+
+                    let loopStarted = false;
+                    const startEngine = () => {
+                        if (loopStarted) return;
+                        loopStarted = true;
+                        canvas.width = remoteVideo.videoWidth || 640;
+                        canvas.height = remoteVideo.videoHeight || 480;
+                        processLoopActive = true;
+                        setTimeout(process, 33);
+                    };
+
+                    remoteVideo.onloadedmetadata = startEngine;
+                    setTimeout(startEngine, 1500);
+                });
+                call.peerConnection.addEventListener('iceconnectionstatechange', () => {
+                    if (call.peerConnection.iceConnectionState === 'disconnected' || call.peerConnection.iceConnectionState === 'failed') handleDisconnect();
+                });
+                call.on('close', handleDisconnect);
+            });
+
+            peer.on('connection', conn => {
+                dataConn = conn;
+                conn.on('data', d => { if (d === 'manual-alert') triggerManual(); });
+                conn.on('close', handleDisconnect);
+            });
+        }
 
         function handleDisconnect() {
-            statusEl.style.display = "block";
-            statusEl.innerText = "Waiting for Broadcaster";
+            statusEl.innerText = "Connection Lost - Waiting...";
+            statusEl.style.opacity = '1';
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
-        peer.on('call', call => {
-            call.answer();
-            call.on('stream', s => {
-                document.getElementById('setup-screen').style.display = 'none';
-                document.getElementById('viewer-screen').style.display = 'flex';
-
-                statusEl.style.display = "none";
-
-                remoteVideo.srcObject = s;
-                remoteVideo.play().catch(e => console.warn("Auto-play blocked:", e));
-
-                gracePeriodEnd = Date.now() + 30000;
-                updateSilenceBtn();
-                remoteVideo.onloadedmetadata = () => {
-                    canvas.width = remoteVideo.videoWidth;
-                    canvas.height = remoteVideo.videoHeight;
-                    setTimeout(process, 33);
-                };
-            });
-            call.peerConnection.addEventListener('iceconnectionstatechange', () => {
-                if (call.peerConnection.iceConnectionState === 'disconnected' || call.peerConnection.iceConnectionState === 'failed') handleDisconnect();
-            });
-            call.on('close', handleDisconnect);
-        });
-
-        peer.on('connection', conn => {
-            dataConn = conn;
-            conn.on('data', d => { if (d === 'manual-alert') triggerManual(); });
-            conn.on('close', handleDisconnect);
-        });
-
         function reset() {
             try { localStorage.removeItem('glimpseDynamicId'); } catch(e){}
-            window.location.reload();
+            processLoopActive = false;
+            if (dataConn) { dataConn.close(); dataConn = null; }
+            if (peer) { peer.destroy(); peer = null; }
+            if (remoteVideo.srcObject) {
+                remoteVideo.srcObject.getTracks().forEach(t => t.stop());
+                remoteVideo.srcObject = null;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            gracePeriodEnd = 0; lastN = 0; motionStartTime = 0; lastMotionTime = 0; isCountingDown = false;
+            initPeer();
+            playReverseAnimation();
         }
+
+        initPeer();
 
         function toggleAvail() {
             isAvail = !isAvail; const b = document.getElementById('btn-avail');
@@ -263,12 +362,10 @@
             const b = document.getElementById('btn-silence'), now = Date.now();
             if (now < gracePeriodEnd) {
                 b.innerText = `Motion Alerts in ${Math.ceil((gracePeriodEnd - now) / 1000)}s`;
-                b.classList.add('danger');
-                isCountingDown = true;
+                b.classList.add('danger'); isCountingDown = true;
             } else if (lastN > 0 && now < lastN + 5000) {
                 b.innerText = `Next Alert in ${Math.ceil(((lastN + 5000) - now) / 1000)}s`;
-                b.classList.add('danger');
-                isCountingDown = true;
+                b.classList.add('danger'); isCountingDown = true;
             } else {
                 b.innerText = isSilenced ? "Unsilence Alerts" : "Silence Motion Alerts";
                 if (isSilenced) b.classList.add('danger'); else b.classList.remove('danger');
@@ -280,24 +377,31 @@
             const now = Date.now();
             if (now < gracePeriodEnd || (lastN > 0 && now < lastN + 5000)) {
                 gracePeriodEnd = 0; lastN = 0; isSilenced = false;
-            } else {
-                isSilenced = !isSilenced;
-            }
+            } else { isSilenced = !isSilenced; }
             updateSilenceBtn();
         }
 
-        function beep(vol = 1, freq = 800) {
+        function playBeep(vol = 1, freq = 800) {
             if (!globalAudioCtx) return;
             try {
+                if (globalAudioCtx.state === 'suspended') {
+                    globalAudioCtx.resume();
+                }
                 const osc = globalAudioCtx.createOscillator();
                 const g = globalAudioCtx.createGain();
+                osc.type = 'sine';
                 osc.connect(g);
                 g.connect(globalAudioCtx.destination);
                 osc.frequency.value = freq;
-                g.gain.setValueAtTime(vol, globalAudioCtx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.001, globalAudioCtx.currentTime + 0.5);
-                osc.start(globalAudioCtx.currentTime);
-                osc.stop(globalAudioCtx.currentTime + 0.5);
+
+                const now = globalAudioCtx.currentTime;
+                g.gain.setValueAtTime(0, now);
+                g.gain.linearRampToValueAtTime(vol, now + 0.02);
+                g.gain.setValueAtTime(vol, now + 0.2);
+                g.gain.linearRampToValueAtTime(0, now + 0.3);
+
+                osc.start(now);
+                osc.stop(now + 0.35);
             } catch(e) { console.warn("Beep failed:", e); }
         }
 
@@ -305,34 +409,27 @@
             const now = Date.now();
             if (now < gracePeriodEnd || now - lastN < 5000) return;
             if (!isSilenced) {
-                beep(1, 800); setTimeout(() => beep(1, 800), 300);
-                try {
-                    if ("Notification" in window && Notification.permission === "granted") {
-                        new Notification("Glimpse", { body: "Motion detected" });
-                    }
-                } catch(e) { console.warn("Notification blocked", e); }
+                playBeep(1, 800); setTimeout(() => playBeep(1, 800), 300);
+                try { if ("Notification" in window && Notification.permission === "granted") new Notification("Glimpse", { body: "Motion detected" }); } catch(e) {}
             }
             document.body.classList.add('alert-mode'); setTimeout(() => document.body.classList.remove('alert-mode'), 1500);
-            lastN = now;
-            updateSilenceBtn();
+            lastN = now; updateSilenceBtn();
         }
 
         function triggerManual() {
-            beep(1, 1000); setTimeout(() => beep(1, 1000), 250); setTimeout(() => beep(1, 1000), 500);
+            playBeep(1, 1000); setTimeout(() => playBeep(1, 1000), 250); setTimeout(() => playBeep(1, 1000), 500);
             document.body.classList.add('manual-call-mode'); setTimeout(() => document.body.classList.remove('manual-call-mode'), 2000);
         }
 
         let prev = null, motionStartTime = 0, lastMotionTime = 0;
 
         function process() {
+            if (!processLoopActive) return;
             if (remoteVideo.paused || remoteVideo.ended) { setTimeout(process, 33); return; }
 
             const now = Date.now();
-            if (now < gracePeriodEnd || (lastN > 0 && now < lastN + 5000)) {
-                updateSilenceBtn();
-            } else if (isCountingDown || gracePeriodEnd > 0) {
-                gracePeriodEnd = 0; updateSilenceBtn();
-            }
+            if (now < gracePeriodEnd || (lastN > 0 && now < lastN + 5000)) { updateSilenceBtn(); }
+            else if (isCountingDown || gracePeriodEnd > 0) { gracePeriodEnd = 0; updateSilenceBtn(); }
 
             if (remoteVideo.videoWidth > 0 && (canvas.width !== remoteVideo.videoWidth || canvas.height !== remoteVideo.videoHeight)) {
                 canvas.width = remoteVideo.videoWidth; canvas.height = remoteVideo.videoHeight; prev = null;
@@ -361,7 +458,6 @@
 
             const sliderVal = parseInt(document.getElementById('sens-slider').value, 10);
             const invSens = 100 - sliderVal;
-
             let totalBlocks = Math.floor(canvas.width / 20) * Math.floor(canvas.height / 20);
             let isBg = document.hidden;
 
@@ -372,12 +468,10 @@
             if (moving > minBlocks && moving < totalBlocks * 0.5) {
                 if (motionStartTime === 0) motionStartTime = now;
                 lastMotionTime = now;
-
                 if (now - motionStartTime >= targetTime) { triggerMotion(); motionStartTime = 0; }
             } else {
                 if (now - lastMotionTime > maxSilence) { motionStartTime = 0; }
             }
-
             setTimeout(process, 33);
         }
     </script>

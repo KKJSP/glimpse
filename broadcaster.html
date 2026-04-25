@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Glimpse Broadcaster</title>
 
     <link rel="icon" type="image/png" href="icons/favicon192.png">
@@ -22,35 +22,42 @@
             --accent: #3b82f6; --accent-hover: #2563eb;
             --green: #10b981; --warning: #f59e0b; --border: #334155;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; min-height: 100vh; overflow-x: hidden; display: flex; flex-direction: column; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
 
-        header { background: var(--header); border-bottom: 1px solid var(--border); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; position: relative; }
+        header {
+            background: var(--header); border-bottom: 1px solid var(--border);
+            height: 65px; display: flex; justify-content: center; align-items: center;
+            position: relative; box-sizing: border-box; flex-shrink: 0;
+        }
         @supports (padding-top: env(safe-area-inset-top)) {
-            header { padding-top: calc(15px + env(safe-area-inset-top)); }
+            header { height: calc(65px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
         }
 
-        @media (max-width: 650px) {
-            header { flex-wrap: wrap; padding: 15px; }
-            .status { position: static; transform: none; width: 100%; text-align: center; margin-top: 15px; order: 3; }
+        .brand { font-weight: 600; font-size: 1.2em; letter-spacing: -1px;}
+        .status { position: absolute; left: 25px; font-size: 0.95em; color: var(--warning); white-space: nowrap; opacity: 0; transition: opacity 0.3s; }
+
+        @media (max-width: 810px) {
+            .status { left: 0; top: 75px; width: 100%; text-align: center; }
         }
 
-        .brand { font-weight: 600; font-size: 1.2em; }
-        .status { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.95em; color: var(--warning); white-space: nowrap; }
-        .status-connected { color: var(--green); }
+        main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; box-sizing: border-box;}
+        video { width: 45%; max-width: 350px; border-radius: 10px; background: #000; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); max-height: 60dvh;}
 
-        main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; }
-        video { width: 45%; max-width: 350px; border-radius: 10px; background: #000; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
-
-        .btn-ring { background: var(--accent); color: white; padding: 20px 20px; font-size: 1.8em; border: none; border-radius: 12px; width: 90%; max-width: 500px; cursor: pointer; font-weight: 600; transition: 0.2s; margin-bottom: 20px; }
+        .btn-ring { background: var(--accent); color: white; padding: 20px 20px; font-size: 1.8em; border: none; border-radius: 12px; width: 90%; max-width: 500px; cursor: pointer; font-weight: 600; transition: 0.2s; margin-bottom: 20px; flex-shrink: 0;}
         .btn-ring:hover:not(:disabled):not(.unavailable) { background: var(--accent-hover); transform: translateY(-3px); }
         .btn-ring:disabled, .btn-ring.unavailable { background: #334155; color: var(--muted); cursor: not-allowed; transform: none; }
+
+        @media (max-height: 500px) {
+            main { padding: 10px; }
+            video { margin-bottom: 10px; max-height: 50dvh; width: auto; }
+            .btn-ring { padding: 12px; font-size: 1.3em; margin-bottom: 5px; }
+        }
     </style>
 </head>
 <body>
     <header>
+        <div id="status" class="status">Connecting...</div>
         <div class="brand">Glimpse</div>
-        <div id="status" class="status">Initializing</div>
-        <div></div>
     </header>
     <main>
         <video id="local-video" autoplay playsinline muted></video>
@@ -60,6 +67,7 @@
         window.onerror = function(msg, url, lineNo, columnNo, error) {
             const statusEl = document.getElementById('status');
             if(statusEl) {
+                statusEl.style.opacity = '1';
                 statusEl.innerText = "System Crash: " + msg;
                 statusEl.style.color = "#ef4444";
             }
@@ -75,11 +83,14 @@
         let dataConn = null, currentCall = null, isAvail = true, localStream = null;
         let isRetrying = false, retryCount = 0, retryTimer = null;
         const MAX_RETRIES = 10;
+        let isPeerOpen = false;
 
+        // Reverted to pure local connection without STUN servers
         const peer = new Peer();
 
         if (!TARGET_ID) {
-            statusEl.innerText = "Missing ID. Scan QR code on Glimpse Monitor";
+            statusEl.style.opacity = '1';
+            statusEl.innerText = "Scan QR code";
             statusEl.style.color = "#ef4444";
         } else {
             const constraints = { video: { facingMode: "environment" }, audio: false };
@@ -89,13 +100,14 @@
                 const videoEl = document.getElementById('local-video');
                 videoEl.srcObject = stream;
                 videoEl.play().catch(e => console.log("Auto-play prevented:", e));
-                attemptConnect();
+
+                if(isPeerOpen && !isRetrying) attemptConnect();
             };
 
             const handleError = function(err) {
+                statusEl.style.opacity = '1';
                 statusEl.innerText = "Camera Error: " + (err.name || "Access Denied");
                 statusEl.style.color = "#ef4444";
-                console.error(err);
             };
 
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -105,11 +117,17 @@
                 if (legacyGetUserMedia) {
                     legacyGetUserMedia.call(navigator, constraints, handleSuccess, handleError);
                 } else {
-                    statusEl.innerText = "Camera API not supported on this browser";
+                    statusEl.style.opacity = '1';
+                    statusEl.innerText = "Camera API not supported";
                     statusEl.style.color = "#ef4444";
                 }
             }
         }
+
+        peer.on('open', () => {
+            isPeerOpen = true;
+            if(localStream && !isRetrying) attemptConnect();
+        });
 
         peer.on('error', err => { if (err.type === 'peer-unavailable') handleDrop(); });
 
@@ -121,28 +139,30 @@
             if (currentCall) { currentCall.close(); currentCall = null; }
 
             ringBtn.disabled = true;
+            statusEl.style.opacity = '1';
 
             if (retryCount >= MAX_RETRIES) {
-                statusEl.innerText = "Connection Failed. Refresh to try again.";
-                statusEl.style.color = "#ef4444"; statusEl.className = "status";
+                statusEl.innerText = "Connection Failed. Refresh.";
+                statusEl.style.color = "#ef4444";
                 return;
             }
 
             retryCount++;
             statusEl.innerText = `Retrying (${retryCount}/${MAX_RETRIES})...`;
-            statusEl.style.color = ""; statusEl.className = "status";
+            statusEl.style.color = "";
 
             if (retryTimer) clearTimeout(retryTimer);
             retryTimer = setTimeout(() => { isRetrying = false; attemptConnect(); }, 3000);
         };
 
         function attemptConnect() {
-            if (isRetrying || !localStream || peer.destroyed) return;
+            if (isRetrying || !localStream || !isPeerOpen || peer.destroyed) return;
             if (peer.disconnected) peer.reconnect();
 
             if (retryCount === 0) {
-                statusEl.innerText = "Finding Glimpse Monitor...";
-                statusEl.style.color = ""; statusEl.className = "status";
+                statusEl.style.opacity = '1';
+                statusEl.innerText = "Finding Monitor...";
+                statusEl.style.color = "";
             }
 
             currentCall = peer.call(TARGET_ID, localStream);
@@ -151,8 +171,7 @@
             if (dataConn) {
                 dataConn.on('open', () => {
                     retryCount = 0;
-                    statusEl.innerText = "Connected";
-                    statusEl.style.color = ""; statusEl.className = "status status-connected";
+                    statusEl.style.opacity = '0';
                     ringBtn.disabled = false;
                 });
                 dataConn.on('data', data => {
