@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Glimpse</title>
 
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="icons/favicon192.png">
+    <link rel="apple-touch-icon" href="icons/favicon192.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="favicon.png">
+
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Glimpse">
@@ -23,11 +24,11 @@
         }
         body {
             font-family: -apple-system, sans-serif; background: var(--bg-dark); color: var(--text-main);
-            margin: 0; height: 100vh; overflow: hidden; transition: background-color 0.4s ease;
+            margin: 0; min-height: 100vh; overflow-x: hidden; transition: background-color 0.4s ease;
         }
 
         #setup-screen {
-            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 20px;
         }
         h1 { margin-bottom: 8px; font-weight: 600; font-size: 2.5em; letter-spacing: -1px; }
         p.subtitle { margin-top: 0; margin-bottom: 40px; color: var(--text-muted); font-size: 1.1em; }
@@ -39,7 +40,7 @@
         .instruction { color: var(--text-muted); font-size: 1em; line-height: 1.5; }
 
         #viewer-screen {
-            display: none; flex-direction: column; height: 100vh; overflow: hidden;
+            display: none; flex-direction: column; min-height: 100vh;
         }
         header {
             position: relative; background: var(--bg-card); border-bottom: 1px solid var(--border);
@@ -58,9 +59,14 @@
         .btn-p { background: var(--accent); color: white; }
         .btn-s { background: transparent; color: var(--text-main); border: 1px solid var(--border); }
 
+        @media (max-width: 650px) {
+            header { flex-wrap: wrap; padding: 15px; }
+            .status { position: static; transform: none; width: 100%; text-align: center; margin-top: 15px; order: 3; }
+        }
+
         .viewer-main {
             flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px; overflow: hidden;
+            padding: 20px;
         }
 
         .video-wrapper {
@@ -69,16 +75,17 @@
             padding: 3px; display: inline-block; box-sizing: border-box; transition: all 0.3s ease;
         }
         canvas {
-            border-radius: 5px; background: #000; max-width: 95vw; max-height: 65vh;
+            border-radius: 5px; background: #000; max-width: 100%; max-height: 65vh;
             width: auto; height: auto; display: block;
         }
-        video { position: absolute; opacity: 0.01; width: 10px; z-index: -1; }
+
+        video { position: fixed; right: 200%; bottom: 200%; width: 10px; z-index: -1; }
 
         .bottom-bar {
             display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;
-            margin-top: 20px; z-index: 10; width: 100%;
+            margin-top: 20px; z-index: 10; width: 100%; padding-bottom: 20px;
         }
-        .btn-t { background: var(--border); color: var(--text-main); min-width: 180px; }
+        .btn-t { background: var(--border); color: var(--text-main); min-width: 180px; padding: 12px 16px; }
         .btn-t.active { background: var(--accent); color: white; }
         .btn-t.danger { background: #ef4444; color: white; }
 
@@ -144,6 +151,12 @@
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 globalAudioCtx = new AudioContext();
+
+                const osc = globalAudioCtx.createOscillator();
+                osc.connect(globalAudioCtx.destination);
+                osc.start(0);
+                osc.stop(globalAudioCtx.currentTime + 0.01);
+
                 globalAudioCtx.resume();
             } catch(e) { console.warn("Audio setup failed:", e); }
 
@@ -205,7 +218,10 @@
                 document.getElementById('viewer-screen').style.display = 'flex';
                 statusEl.innerText = "Broadcaster Connected";
                 statusEl.className = "status status-connected";
+
                 remoteVideo.srcObject = s;
+                remoteVideo.play().catch(e => console.warn("Auto-play blocked:", e));
+
                 gracePeriodEnd = Date.now() + 30000;
                 updateSilenceBtn();
                 remoteVideo.onloadedmetadata = () => {
@@ -257,13 +273,8 @@
 
         function toggleSilence() {
             const now = Date.now();
-            const inGracePeriod = now < gracePeriodEnd;
-            const inCooldown = lastN > 0 && now < lastN + 5000;
-
-            if (inGracePeriod || inCooldown) {
-                gracePeriodEnd = 0;
-                lastN = 0;
-                isSilenced = false;
+            if (now < gracePeriodEnd || (lastN > 0 && now < lastN + 5000)) {
+                gracePeriodEnd = 0; lastN = 0; isSilenced = false;
             } else {
                 isSilenced = !isSilenced;
             }
@@ -290,14 +301,11 @@
             if (now < gracePeriodEnd || now - lastN < 5000) return;
             if (!isSilenced) {
                 beep(1, 800); setTimeout(() => beep(1, 800), 300);
-
                 try {
                     if ("Notification" in window && Notification.permission === "granted") {
                         new Notification("Glimpse", { body: "Motion detected" });
                     }
-                } catch(e) {
-                    console.warn("Notification blocked by browser", e);
-                }
+                } catch(e) { console.warn("Notification blocked", e); }
             }
             document.body.classList.add('alert-mode'); setTimeout(() => document.body.classList.remove('alert-mode'), 1500);
             lastN = now;
@@ -318,8 +326,7 @@
             if (now < gracePeriodEnd || (lastN > 0 && now < lastN + 5000)) {
                 updateSilenceBtn();
             } else if (isCountingDown || gracePeriodEnd > 0) {
-                gracePeriodEnd = 0;
-                updateSilenceBtn();
+                gracePeriodEnd = 0; updateSilenceBtn();
             }
 
             if (remoteVideo.videoWidth > 0 && (canvas.width !== remoteVideo.videoWidth || canvas.height !== remoteVideo.videoHeight)) {
@@ -361,14 +368,9 @@
                 if (motionStartTime === 0) motionStartTime = now;
                 lastMotionTime = now;
 
-                if (now - motionStartTime >= targetTime) {
-                    triggerMotion();
-                    motionStartTime = 0;
-                }
+                if (now - motionStartTime >= targetTime) { triggerMotion(); motionStartTime = 0; }
             } else {
-                if (now - lastMotionTime > maxSilence) {
-                    motionStartTime = 0;
-                }
+                if (now - lastMotionTime > maxSilence) { motionStartTime = 0; }
             }
 
             setTimeout(process, 33);
