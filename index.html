@@ -20,7 +20,8 @@
     <style>
         :root {
             --bg-dark: #121418; --bg-card: #1e2126; --text-main: #f1f5f9; --text-muted: #94a3b8;
-            --accent: #7973f0; --green: #10b981; --warning: #f59e0b; --border: #334155;
+            --accent: #7973f0; --accent-hover: #635fc8;
+            --green: #10b981; --warning: #f59e0b; --border: #334155;
         }
 
         * { -webkit-tap-highlight-color: transparent; outline: none; }
@@ -31,37 +32,13 @@
             overflow: hidden; transition: background-color 0.4s ease;
         }
 
-        .anim-element { transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), top 0.3s ease; }
+        .anim-element { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), top 0.4s ease; }
 
-        /* --- SETUP LAYOUT --- */
         #shared-glimpse { position: absolute; margin: 0; font-weight: 600; letter-spacing: -1px; z-index: 100; }
-
-        .glimpse-center { top: 28dvh; left: 50%; transform: translate(-50%, -50%) scale(2.5); }
+        .glimpse-center { top: 30dvh; left: 50%; transform: translate(-50%, -50%) scale(2.5); }
         .glimpse-top { top: 32px; left: 50%; transform: translate(-50%, -50%) scale(1.2); }
         @supports (padding-top: env(safe-area-inset-top)) { .glimpse-top { top: calc(32px + env(safe-area-inset-top)); } }
 
-        #setup-content { position: absolute; top: calc(28dvh + 50px); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
-        .setup-visible { transform: translateY(0); opacity: 1; pointer-events: auto;}
-        .setup-hidden { transform: translateY(100dvh); opacity: 0; pointer-events: none;}
-
-        p.subtitle { margin-top: 0; margin-bottom: 25px; color: var(--text-muted); font-size: 1.1em; text-align: center;}
-
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 250px; min-height: 250px; justify-content: center; cursor: pointer; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
-        .card.shrinking { transform: scale(0.92); opacity: 0.8; }
-
-        #qrcode-wrapper { width: 160px; height: 160px; margin-bottom: 20px; flex-shrink: 0; }
-        #qrcode { background: white; padding: 12px; border-radius: 10px; width: 100%; height: 100%; box-sizing: border-box; display: flex; justify-content: center; align-items: center; }
-        #qrcode img, #qrcode canvas { width: 100% !important; height: 100% !important; display: block; }
-
-        .instruction { color: var(--text-muted); font-size: 0.95em; line-height: 1.4; text-align: center; }
-
-        .manual-join { margin-top: 25px; display: flex; gap: 8px; width: 100%; max-width: 310px; opacity: 0.8; transition: opacity 0.2s; }
-        .manual-join:focus-within { opacity: 1; }
-        .manual-join input { flex: 1; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); font-size: 0.95em; outline: none; font-family: monospace; letter-spacing: 1px; }
-        .manual-join input:focus { border-color: var(--accent); }
-
-        /* --- HEADER & CONTROLS --- */
         header {
             position: absolute; top: 0; left: 0; width: 100%; height: 65px;
             background: var(--bg-card); border-bottom: 1px solid var(--border);
@@ -85,24 +62,38 @@
         }
         .status-banner.show { transform: translateY(0); opacity: 1; }
         .status-banner.info { background: var(--border); color: var(--text-main); }
-        @supports (padding-top: env(safe-area-inset-top)) {
-            .status-banner { top: calc(65px + env(safe-area-inset-top)); }
-        }
+        @supports (padding-top: env(safe-area-inset-top)) { .status-banner { top: calc(65px + env(safe-area-inset-top)); } }
+
+        #hub-view { position: absolute; top: calc(30dvh + 55px); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .view-hidden { transform: translateY(100dvh); opacity: 0; pointer-events: none; }
+        .view-visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
+
+        p.subtitle { margin-top: 0; margin-bottom: 25px; color: var(--text-muted); font-size: 1.1em; text-align: center;}
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 250px; min-height: 250px; justify-content: center; cursor: pointer; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
+        .card.shrinking { transform: scale(0.92); opacity: 0.8; }
+
+        #qrcode-wrapper { width: 160px; height: 160px; margin-bottom: 20px; flex-shrink: 0; }
+        #qrcode { background: white; padding: 12px; border-radius: 10px; width: 100%; height: 100%; box-sizing: border-box; display: flex; justify-content: center; align-items: center; }
+        #qrcode img, #qrcode canvas { width: 100% !important; height: 100% !important; display: block; }
+        .instruction { color: var(--text-muted); font-size: 0.95em; line-height: 1.4; text-align: center; }
+
+        .manual-join { margin-top: 25px; display: flex; gap: 8px; width: 100%; max-width: 310px; opacity: 0.8; transition: opacity 0.2s; }
+        .manual-join:focus-within { opacity: 1; }
+        /* Adjusted input to handle numbers specifically well */
+        .manual-join input { flex: 1; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); font-size: 1em; outline: none; font-family: monospace; letter-spacing: 2px; text-align: center;}
+        .manual-join input:focus { border-color: var(--accent); }
 
         button { font-weight: 500; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: background 0.2s; white-space: nowrap; }
         .btn-p { background: var(--accent); color: white; }
         button:disabled { background: var(--border) !important; color: var(--text-muted) !important; cursor: default; }
 
-        /* --- VIEWER CONTENT --- */
-        #viewer-main {
+        .workspace {
             position: absolute; top: 105px; bottom: 0; left: 0; width: 100%;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 10px 20px max(5vh, 25px) 20px; box-sizing: border-box;
         }
-        @supports (padding-top: env(safe-area-inset-top)) { #viewer-main { top: calc(105px + env(safe-area-inset-top)); } }
-
-        .viewer-hidden { transform: translateY(100dvh); pointer-events: none; }
-        .viewer-visible { transform: translateY(0); pointer-events: auto; }
+        @supports (padding-top: env(safe-area-inset-top)) { .workspace { top: calc(105px + env(safe-area-inset-top)); } }
 
         .video-container { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
         .video-wrapper {
@@ -112,35 +103,40 @@
         canvas { border-radius: 5px; background: #000; max-width: 100%; max-height: 100%; width: auto; height: auto; display: block; object-fit: contain; }
         video { position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -1; }
 
+        #broadcaster-view video { position: relative; opacity: 1; pointer-events: auto; max-width: 100%; max-height: 100%; width: auto; height: auto; border-radius: 5px; display: block; object-fit: contain; }
+
         #play-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 20; border-radius: 8px; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
         #play-overlay span { background: var(--accent); color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 1.1em; pointer-events: none; }
 
         .bottom-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; z-index: 10; width: 100%; flex-shrink: 0; }
-
         .btn-t { background: var(--border); color: var(--text-main); min-width: 140px; padding: 12px 16px; border-radius: 6px; font-size: 0.9em;}
         .btn-t.active { background: var(--accent); color: white; }
-
         .slider-group { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0; }
         .slider-group label { font-weight: 500; min-width: 80px; text-align: left; transition: color 0.2s; }
         input[type="range"] { accent-color: var(--accent); cursor: pointer; width: 100px; }
 
+        .btn-ring { background: var(--accent); color: white; padding: 16px 20px; font-size: 1.4em; border: none; border-radius: 12px; width: 100%; max-width: 500px; cursor: pointer; font-weight: 600; transition: 0.2s; flex-shrink: 0; margin-top: 20px;}
+        .btn-ring:hover:not(:disabled):not(.unavailable) { background: var(--accent-hover); transform: translateY(-3px); }
+        .btn-ring:disabled, .btn-ring.unavailable { background: #334155; color: var(--muted); cursor: not-allowed; transform: none; }
+
         .alert-mode { background-color: #1a0f0f !important; }
-        .alert-mode .video-wrapper { border-color: #cc3333; box-shadow: 0 0 0 2px #cc3333, 0 0 30px rgba(204, 51, 51, 0.2); }
+        .alert-mode #viewer-view .video-wrapper { border-color: #cc3333; box-shadow: 0 0 0 2px #cc3333, 0 0 30px rgba(204, 51, 51, 0.2); }
         .manual-call-mode { background-color: #0b1120 !important; }
-        .manual-call-mode .video-wrapper { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 0 30px rgba(121, 115, 240, 0.3); }
+        .manual-call-mode #viewer-view .video-wrapper { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 0 30px rgba(121, 115, 240, 0.3); }
 
         @media (max-height: 500px) {
-            .glimpse-center { top: 100px; transform: translate(-50%, -50%) scale(1.5); }
-            #setup-content { top: 130px; }
+            .glimpse-center { top: 90px; transform: translate(-50%, -50%) scale(1.5); }
+            #setup-content { top: 120px; }
             .card { padding: 10px 20px; flex-direction: row; gap: 20px; border-radius: 12px; min-height: unset; }
             #qrcode-wrapper { margin-bottom: 0; width: 90px; height: 90px; }
             #qrcode { padding: 5px; }
             p.subtitle { margin-bottom: 10px; font-size: 0.9em; }
             .manual-join { margin-top: 15px; }
 
-            #viewer-main { padding: 5px 10px 10px 10px; top: 105px; }
+            .workspace { padding: 5px 10px 10px 10px; top: 105px; }
             .bottom-bar { margin-top: 10px; gap: 8px; }
             .btn-t { min-width: 120px; padding: 8px 12px; font-size: 0.8em; }
+            .btn-ring { padding: 12px; font-size: 1.1em; margin-top: 10px; }
         }
     </style>
 </head>
@@ -148,36 +144,38 @@
 
     <header>
         <div id="header-controls" class="header-controls anim-element controls-hidden">
-            <button id="btn-global-mute" class="icon-btn" onclick="toggleGlobalMute()" title="Toggle All Audio">
+            <button id="btn-viewer-mute" class="icon-btn" onclick="toggleGlobalMute()" title="Toggle All Audio" style="display:none;">
                 <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
             </button>
-            <button class="icon-btn" onclick="closeViewerSession()" title="Close Connection">
+            <button id="btn-broadcaster-mute" class="icon-btn" onclick="toggleMicMute()" title="Toggle Microphone" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c3.39-.49 6-3.39 6-6.92h-1.7z"/></svg>
+            </button>
+            <button class="icon-btn" onclick="closeSession()" title="Close Connection">
                 <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
             </button>
         </div>
     </header>
 
     <div id="status-banner" class="status-banner info">Waiting for Broadcaster</div>
-
     <h1 id="shared-glimpse" class="anim-element glimpse-center">Glimpse</h1>
 
-    <div id="setup-content" class="anim-element setup-visible">
+    <div id="hub-view" class="anim-element view-visible">
         <p class="subtitle">Local video monitoring</p>
-        <div class="card" onclick="triggerReset()" title="Click to generate a new QR code">
+        <div class="card" onclick="triggerReset()" title="Click to refresh ID">
             <div id="qrcode-wrapper">
                 <div id="qrcode"></div>
             </div>
             <div class="instruction">Scan the QR code with your camera device<br>to start the session.</div>
-            <div id="qr-id-display" style="margin-top: 10px; font-family: monospace; font-size: 1.1em; color: var(--accent); font-weight: 600; letter-spacing: 2px;"></div>
+            <div id="qr-id-display" style="margin-top: 10px; font-family: monospace; font-size: 1.4em; color: var(--accent); font-weight: 600; letter-spacing: 4px;"></div>
         </div>
 
         <div class="manual-join">
-            <input type="text" id="manual-id" placeholder="Or Enter ID to broadcast" autocomplete="off">
+            <input type="tel" id="manual-id" placeholder="Enter 6-digit ID" autocomplete="off" maxlength="6">
             <button class="btn-p" onclick="joinAsBroadcaster()">Broadcast</button>
         </div>
     </div>
 
-    <div id="viewer-main" class="anim-element viewer-hidden">
+    <div id="viewer-view" class="anim-element workspace view-hidden">
         <video id="remote-video" playsinline></video>
         <div class="video-container">
             <div class="video-wrapper">
@@ -189,7 +187,6 @@
         </div>
         <div id="bottom-bar" class="bottom-bar">
             <button id="btn-avail" class="btn-t active" onclick="toggleAvail()">Rings Allowed</button>
-
             <div class="btn-t slider-group">
                 <label id="sens-label" for="sens-slider">Sensitivity</label>
                 <input type="range" id="sens-slider" min="0" max="100" value="80">
@@ -197,148 +194,174 @@
         </div>
     </div>
 
+    <div id="broadcaster-view" class="anim-element workspace view-hidden">
+        <div class="video-container">
+            <div class="video-wrapper">
+                <video id="local-video" autoplay playsinline muted></video>
+            </div>
+        </div>
+        <button id="ring-btn" class="btn-ring" onclick="sendRing()" disabled>Ring Viewer</button>
+    </div>
+
     <script>
-        let globalAudioCtx = null;
-        let interactionDone = false;
-        let isViewerMode = false;
-        let processLoopActive = false;
+        // --- HIDDEN NAMESPACE CONFIGURATION ---
+        const APP_PREFIX = "glimpse-net-";
+
+        let currentMode = 'hub';
+        let myId, peer = null, dataConn = null, currentCall = null;
+        let persistentStatus = "Waiting for Broadcaster";
+        let tempTimer = null;
 
         document.addEventListener('keydown', (e) => {
-            if ((e.key === 'c' || e.key === 'C') && !isViewerMode) playForwardAnimation();
+            if (currentMode !== 'hub') return;
+            if (e.key === 'c' || e.key === 'C') mockUI('viewer');
+            if (e.key === 'b' || e.key === 'B') mockUI('broadcaster');
         });
 
-        function setPersistentStatus(msg, isInfo = true) {
-            const banner = document.getElementById('status-banner');
-            if (isInfo) banner.classList.add('info'); else banner.classList.remove('info');
+        function mockUI(target) {
+            setPersistentStatus("");
+            playForwardAnimation(target);
+        }
 
-            if (msg) {
-                banner.innerText = msg;
-                banner.classList.add('show');
-            } else {
-                banner.classList.remove('show');
+        function setPersistentStatus(msg, isInfo = true) {
+            persistentStatus = msg;
+            if (!tempTimer) {
+                const banner = document.getElementById('status-banner');
+                if (isInfo) banner.classList.add('info'); else banner.classList.remove('info');
+                if (msg) {
+                    banner.innerText = msg;
+                    banner.classList.add('show');
+                } else {
+                    banner.classList.remove('show');
+                }
             }
         }
 
-        function playForwardAnimation() {
-            if (isViewerMode) return;
-            isViewerMode = true;
-            document.getElementById('setup-content').className = 'anim-element setup-hidden';
+        function showNotification(msg, duration = 0, isInfo = false) {
+            const banner = document.getElementById('status-banner');
+            banner.innerText = msg;
+            if (isInfo) banner.classList.add('info'); else banner.classList.remove('info');
+            banner.classList.add('show');
+
+            if (tempTimer) clearTimeout(tempTimer);
+            if (duration > 0) {
+                tempTimer = setTimeout(() => {
+                    tempTimer = null;
+                    if (persistentStatus) {
+                        banner.innerText = persistentStatus;
+                        if (persistentStatus.includes('Error') || persistentStatus.includes('Failed') || persistentStatus.includes('closed') || persistentStatus.includes('Blocked')) {
+                            banner.classList.remove('info');
+                        } else {
+                            banner.classList.add('info');
+                        }
+                    } else {
+                        banner.classList.remove('show');
+                    }
+                }, duration);
+            } else {
+                tempTimer = null;
+                if (!msg) banner.classList.remove('show');
+            }
+        }
+
+        function playForwardAnimation(mode) {
+            currentMode = mode;
+            document.getElementById('hub-view').classList.remove('view-visible');
+            document.getElementById('hub-view').classList.add('view-hidden');
+
             document.getElementById('shared-glimpse').className = 'anim-element glimpse-top';
-            document.getElementById('viewer-main').className = 'anim-element viewer-visible';
             document.getElementById('header-controls').className = 'header-controls anim-element controls-visible';
+
+            if (mode === 'viewer') {
+                document.getElementById('btn-viewer-mute').style.display = 'flex';
+                document.getElementById('btn-broadcaster-mute').style.display = 'none';
+                document.getElementById('viewer-view').classList.add('view-visible');
+                document.getElementById('viewer-view').classList.remove('view-hidden');
+            } else if (mode === 'broadcaster') {
+                document.getElementById('btn-viewer-mute').style.display = 'none';
+                document.getElementById('btn-broadcaster-mute').style.display = 'flex';
+                document.getElementById('broadcaster-view').classList.add('view-visible');
+                document.getElementById('broadcaster-view').classList.remove('view-hidden');
+            }
         }
 
-        function playReverseAnimation(onComplete) {
-            if (!isViewerMode) return;
-            isViewerMode = false;
-            document.getElementById('viewer-main').className = 'anim-element viewer-hidden';
+        function returnToHub(delay = 150) {
+            currentMode = 'hub';
+            document.getElementById('viewer-view').classList.add('view-hidden');
+            document.getElementById('viewer-view').classList.remove('view-visible');
+            document.getElementById('broadcaster-view').classList.add('view-hidden');
+            document.getElementById('broadcaster-view').classList.remove('view-visible');
+
             document.getElementById('shared-glimpse').className = 'anim-element glimpse-center';
-            document.getElementById('setup-content').className = 'anim-element setup-visible';
             document.getElementById('header-controls').className = 'header-controls anim-element controls-hidden';
-            if (onComplete) setTimeout(onComplete, 700);
+
+            setTimeout(() => {
+                document.getElementById('hub-view').classList.add('view-visible');
+                document.getElementById('hub-view').classList.remove('view-hidden');
+            }, delay);
         }
 
-        function enableAudioAndNotifs() {
-            if (interactionDone) return;
-            interactionDone = true;
-
-            try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                globalAudioCtx = new AudioContext();
-
-                const silentOsc = globalAudioCtx.createOscillator();
-                const silentGain = globalAudioCtx.createGain();
-                silentGain.gain.value = 0.001;
-                silentOsc.connect(silentGain);
-                silentGain.connect(globalAudioCtx.destination);
-                silentOsc.start();
-
-                const osc = globalAudioCtx.createOscillator();
-                const g = globalAudioCtx.createGain();
-                osc.connect(g); g.connect(globalAudioCtx.destination);
-                g.gain.value = 0;
-                osc.start(0);
-                g.gain.setTargetAtTime(0.1, globalAudioCtx.currentTime, 0.01);
-                g.gain.setTargetAtTime(0, globalAudioCtx.currentTime + 0.05, 0.01);
-                osc.stop(globalAudioCtx.currentTime + 0.1);
-
-                if (globalAudioCtx.state === 'suspended') {
-                    globalAudioCtx.resume();
-                }
-            } catch(e) { console.warn("Audio setup failed:", e); }
-        }
-
-        function forcePlay() {
-            const remoteVideo = document.getElementById('remote-video');
-            remoteVideo.play().then(() => {
-                document.getElementById('play-overlay').style.display = 'none';
-            }).catch(e => console.warn(e));
-            if(!interactionDone) enableAudioAndNotifs();
-        }
-
+        // Generate exactly 6 numbers
         function genId() {
-            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-            const nums = '0123456789';
-            let id = nums[Math.floor(Math.random() * 10)];
-            for (let i = 0; i < 5; i++) {
-                id += chars[Math.floor(Math.random() * chars.length)];
+            let id = '';
+            for (let i = 0; i < 6; i++) {
+                id += Math.floor(Math.random() * 10);
             }
             return id;
         }
 
-        function joinAsBroadcaster() {
-            const id = document.getElementById('manual-id').value.trim().toLowerCase();
-            if(id) window.location.href = 'broadcaster.html#' + id;
-        }
+        const peerOpts = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
 
+        // INITIALIZATION ROUTER
+        window.addEventListener('load', () => {
+            const hash = window.location.hash.substring(1);
+            if (hash && hash.startsWith(APP_PREFIX)) {
+                TARGET_ID = hash;
+                window.history.replaceState(null, null, window.location.pathname);
+                initBroadcaster();
+            } else {
+                initHub();
+            }
+        });
+
+        // HUB/VIEWER LOGIC
+        let globalAudioCtx = null, interactionDone = false, processLoopActive = false;
+        let isSilenced = false, isAvail = true, gracePeriodEnd = 0, lastN = 0, isGlobalMuted = false;
         const remoteVideo = document.getElementById('remote-video');
         const canvas = document.getElementById('display-canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-        let myId, peer = null, dataConn = null;
-        let isSilenced = false, isAvail = true, gracePeriodEnd = 0, lastN = 0;
-        let isGlobalMuted = false;
-        let isClosedByBroadcaster = false;
-
-        function initPeer() {
+        function initHub() {
             myId = genId();
             try {
                 const stored = localStorage.getItem('glimpseDynamicId');
-                if (stored && stored.length === 6) { myId = stored; }
-                else { localStorage.setItem('glimpseDynamicId', myId); }
+                // Regex check to ensure old string IDs are dumped for new numeric ones
+                if (stored && /^\d{6}$/.test(stored)) { myId = stored; } else { localStorage.setItem('glimpseDynamicId', myId); }
             } catch(e) {}
 
-            const link = new URL('broadcaster.html#' + myId, window.location.href).href;
+            const fullPeerId = APP_PREFIX + myId;
+            const link = new URL('#' + fullPeerId, window.location.href).href;
             document.getElementById("qrcode").innerHTML = "";
             new QRCode(document.getElementById("qrcode"), {
                 text: link, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L
             });
 
-            document.getElementById("qr-id-display").innerText = myId;
+            // Format ID nicely with a space in the middle for easier reading
+            document.getElementById("qr-id-display").innerText = myId.substring(0,3) + " " + myId.substring(3,6);
+            setPersistentStatus("Waiting for Broadcaster", true);
 
-            const peerOpts = {
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
-                    ]
-                }
-            };
-            peer = new Peer(myId, peerOpts);
+            peer = new Peer(fullPeerId, peerOpts);
 
             peer.on('call', call => {
                 call.answer();
                 call.on('stream', s => {
-                    playForwardAnimation();
-
+                    playForwardAnimation('viewer');
                     remoteVideo.srcObject = s;
                     remoteVideo.muted = isGlobalMuted;
-
                     document.getElementById('play-overlay').style.display = 'flex';
                     remoteVideo.pause();
 
                     gracePeriodEnd = Date.now() + 30000;
-
                     let loopStarted = false;
                     const startEngine = () => {
                         if (loopStarted) return;
@@ -348,7 +371,6 @@
                         processLoopActive = true;
                         setTimeout(process, 33);
                     };
-
                     remoteVideo.onloadedmetadata = startEngine;
                     setTimeout(startEngine, 1500);
                 });
@@ -363,76 +385,192 @@
                 setPersistentStatus("", true);
                 conn.on('data', d => {
                     if (d === 'manual-alert') triggerManual();
-                    else if (d === 'broadcaster-closed') {
-                        isClosedByBroadcaster = true;
-                        handleDisconnect();
-                    }
+                    else if (d === 'broadcaster-closed') forceDisconnect("Broadcaster closed the session");
                 });
                 conn.on('close', handleDisconnect);
             });
         }
 
-        function handleDisconnect() {
-            if (isClosedByBroadcaster) {
-                setPersistentStatus("Broadcaster closed the session", false);
-                isClosedByBroadcaster = false;
+        // BROADCASTER LOGIC
+        let localStream = null, isRetrying = false, retryCount = 0, retryTimer = null;
+        let isPeerOpen = false, hasAudio = false, isForceClosed = false;
+        const ringBtn = document.getElementById('ring-btn');
+        let TARGET_ID = null;
+
+        function joinAsBroadcaster() {
+            // Strip any accidental spaces the user might have typed
+            const id = document.getElementById('manual-id').value.replace(/\s+/g, '');
+            if(id && /^\d{6}$/.test(id)) {
+                TARGET_ID = APP_PREFIX + id;
+                initBroadcaster();
             } else {
-                setPersistentStatus("Connection Lost - Waiting...", false);
+                showNotification("Enter exactly 6 numbers", 2000, false);
             }
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
-        function closeViewerSession() {
-            if (dataConn && dataConn.open) {
-                dataConn.send('viewer-closed');
-            }
-            setTimeout(() => {
-                reset();
-            }, 150);
-        }
-
-        function reset() {
-            try { localStorage.removeItem('glimpseDynamicId'); } catch(e){}
-            processLoopActive = false;
-            if (dataConn) { dataConn.close(); dataConn = null; }
+        function initBroadcaster() {
             if (peer) { peer.destroy(); peer = null; }
-            if (remoteVideo.srcObject) {
-                remoteVideo.srcObject.getTracks().forEach(t => t.stop());
-                remoteVideo.srcObject = null;
-            }
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            gracePeriodEnd = 0; lastN = 0; motionStartTime = 0; lastMotionTime = 0;
-            isClosedByBroadcaster = false;
+            setPersistentStatus("Connecting...", true);
+            playForwardAnimation('broadcaster');
 
-            setPersistentStatus("Waiting for Broadcaster", true);
-            initPeer();
-            playReverseAnimation();
+            peer = new Peer(peerOpts);
+
+            const handleSuccess = function(stream, requestedAudio) {
+                localStream = stream;
+                hasAudio = requestedAudio && stream.getAudioTracks().length > 0;
+                updateMicIcon();
+                const videoEl = document.getElementById('local-video');
+                videoEl.srcObject = stream;
+                videoEl.play().catch(e => console.log("Auto-play prevented:", e));
+                if(isPeerOpen && !isRetrying && !isForceClosed) attemptConnect();
+            };
+
+            const initCamera = (requestAudio) => {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: requestAudio })
+                    .then(stream => handleSuccess(stream, requestAudio))
+                    .catch(err => {
+                        if (requestAudio) { initCamera(false); }
+                        else {
+                            setPersistentStatus("Camera Access Blocked", false);
+                            ringBtn.disabled = false;
+                            ringBtn.innerText = "Enable Camera";
+                            ringBtn.classList.remove('unavailable');
+                            ringBtn.onclick = () => {
+                                ringBtn.disabled = true;
+                                ringBtn.innerText = "Requesting...";
+                                initCamera(true);
+                                ringBtn.onclick = sendRing;
+                            };
+                        }
+                    });
+            };
+
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) initCamera(true);
+            else setPersistentStatus("Camera API not supported", false);
+
+            peer.on('open', () => {
+                isPeerOpen = true;
+                if(localStream && !isRetrying && !isForceClosed) attemptConnect();
+            });
+
+            peer.on('error', err => { if (err.type === 'peer-unavailable') handleDrop(); });
+        }
+
+        function attemptConnect() {
+            if (isRetrying || !localStream || !isPeerOpen || peer.destroyed || isForceClosed) return;
+            if (peer.disconnected) peer.reconnect();
+            if (retryCount === 0) setPersistentStatus("Finding Monitor...", true);
+
+            currentCall = peer.call(TARGET_ID, localStream);
+            dataConn = peer.connect(TARGET_ID);
+
+            if (dataConn) {
+                dataConn.on('open', () => {
+                    retryCount = 0;
+                    setPersistentStatus("");
+                    ringBtn.disabled = false;
+                    ringBtn.innerText = isAvail ? "Ring Viewer" : "Viewer Unavailable";
+                });
+                dataConn.on('data', data => {
+                    if (data === 'set-unavailable') {
+                        isAvail = false; ringBtn.classList.add('unavailable'); ringBtn.innerText = "Viewer Unavailable";
+                    } else if (data === 'set-available') {
+                        isAvail = true; ringBtn.classList.remove('unavailable'); ringBtn.innerText = "Ring Viewer";
+                    } else if (data === 'viewer-closed') {
+                        forceDisconnect("Connection closed by viewer");
+                    }
+                });
+                dataConn.on('close', handleDrop);
+                dataConn.on('error', handleDrop);
+            }
+
+            if (currentCall) {
+                if (currentCall.peerConnection) {
+                    var pc = currentCall.peerConnection;
+                    pc.addEventListener('iceconnectionstatechange', () => {
+                        if (pc && (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed')) handleDrop();
+                    });
+                }
+                currentCall.on('close', handleDrop);
+                currentCall.on('error', handleDrop);
+            }
+        }
+
+        const handleDrop = () => {
+            if (isRetrying || isForceClosed) return;
+            isRetrying = true;
+            if (dataConn) { dataConn.close(); dataConn = null; }
+            if (currentCall) { currentCall.close(); currentCall = null; }
+            ringBtn.disabled = true;
+
+            if (retryCount >= MAX_RETRIES) {
+                setPersistentStatus("Connection Failed. Exit and try again.", false);
+                return;
+            }
+            retryCount++;
+            setPersistentStatus(`Retrying (${retryCount}/${MAX_RETRIES})...`, true);
+            if (retryTimer) clearTimeout(retryTimer);
+            retryTimer = setTimeout(() => { isRetrying = false; attemptConnect(); }, 3000);
+        };
+
+        // SHARED TEARDOWN LOGIC
+        function forceDisconnect(msg) {
+            isForceClosed = true;
+            if (retryTimer) clearTimeout(retryTimer);
+            if (dataConn) { dataConn.close(); dataConn = null; }
+            if (currentCall) { currentCall.close(); currentCall = null; }
+            if (currentMode === 'broadcaster') {
+                ringBtn.disabled = true;
+                ringBtn.innerText = "Session Ended";
+                ringBtn.classList.add('unavailable');
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            setPersistentStatus(msg, false);
+            setTimeout(() => { resetToHub(); }, 3000);
+        }
+
+        function closeSession() {
+            if (currentMode === 'broadcaster') {
+                if (dataConn && dataConn.open) dataConn.send('broadcaster-closed');
+            } else if (currentMode === 'viewer') {
+                if (dataConn && dataConn.open) dataConn.send('viewer-closed');
+            }
+            resetToHub();
         }
 
         function triggerReset() {
             const card = document.querySelector('.card');
             if (card) card.classList.add('shrinking');
-            setTimeout(() => {
-                reset();
-                if (card) card.classList.remove('shrinking');
-            }, 150);
+            setTimeout(() => { resetToHub(); if (card) card.classList.remove('shrinking'); }, 150);
         }
 
-        initPeer();
-        setPersistentStatus("Waiting for Broadcaster", true);
+        function resetToHub() {
+            processLoopActive = false;
+            isForceClosed = false;
+            isRetrying = false;
+            retryCount = 0;
+            if (retryTimer) clearTimeout(retryTimer);
 
-        function toggleAvail() {
-            isAvail = !isAvail; const b = document.getElementById('btn-avail');
-            b.innerText = isAvail ? "Rings Allowed" : "Rings Blocked";
-            if (isAvail) b.classList.add('active'); else b.classList.remove('active');
-            if (dataConn) dataConn.send(isAvail ? 'set-available' : 'set-unavailable');
+            if (dataConn) { dataConn.close(); dataConn = null; }
+            if (currentCall) { currentCall.close(); currentCall = null; }
+            if (peer) { peer.destroy(); peer = null; }
+
+            if (remoteVideo.srcObject) { remoteVideo.srcObject.getTracks().forEach(t => t.stop()); remoteVideo.srcObject = null; }
+            if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            gracePeriodEnd = 0; lastN = 0; motionStartTime = 0; lastMotionTime = 0;
+
+            returnToHub();
+            setTimeout(() => { initHub(); }, 400);
         }
 
+        // AUDIO & TOGGLES
         function toggleGlobalMute() {
             isGlobalMuted = !isGlobalMuted;
             if (remoteVideo) remoteVideo.muted = isGlobalMuted;
-
-            const btn = document.getElementById('btn-global-mute');
+            const btn = document.getElementById('btn-viewer-mute');
             if (isGlobalMuted) {
                 btn.classList.add('muted-icon');
                 btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
@@ -442,53 +580,108 @@
             }
         }
 
+        function updateMicIcon() {
+            const btn = document.getElementById('btn-broadcaster-mute');
+            const isMuted = !hasAudio || !localStream.getAudioTracks()[0].enabled;
+            if (isMuted) {
+                btn.classList.add('muted-icon');
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02 3.28c-.91.73-2.05 1.22-3.28 1.22-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c3.39-.49 6-3.39 6-6.92h-1.7c0 1.23-.49 2.37-1.22 3.28zM4.27 3L3 4.27l6 6V11c0 1.66 1.34 3 3 3 .23 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c2.11-.3 3.96-1.39 5.22-2.95l2.51 2.51 1.27-1.27L4.27 3zM12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>`;
+            } else {
+                btn.classList.remove('muted-icon');
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c3.39-.49 6-3.39 6-6.92h-1.7z"/></svg>`;
+            }
+        }
+
+        function toggleMicMute() {
+            if (hasAudio) {
+                const track = localStream.getAudioTracks()[0];
+                track.enabled = !track.enabled;
+                updateMicIcon();
+            } else {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        const audioTrack = stream.getAudioTracks()[0];
+                        localStream.addTrack(audioTrack);
+                        hasAudio = true;
+                        updateMicIcon();
+                        if (currentCall) currentCall.close();
+                        attemptConnect();
+                    }).catch(err => { showNotification("Microphone permissions not granted", 2000, false); });
+            }
+        }
+
+        function toggleAvail() {
+            isAvail = !isAvail; const b = document.getElementById('btn-avail');
+            b.innerText = isAvail ? "Rings Allowed" : "Rings Blocked";
+            if (isAvail) b.classList.add('active'); else b.classList.remove('active');
+            if (dataConn && dataConn.open) dataConn.send(isAvail ? 'set-available' : 'set-unavailable');
+        }
+
+        function sendRing() {
+            if (dataConn && dataConn.open && isAvail) {
+                dataConn.send('manual-alert');
+                ringBtn.innerText = "Ringing...";
+                setTimeout(() => ringBtn.innerText = "Ring Viewer", 2000);
+            }
+        }
+
+        // MOTION & AUDIO ENGINE
+        function enableAudioAndNotifs() {
+            if (interactionDone) return;
+            interactionDone = true;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                globalAudioCtx = new AudioContext();
+                const silentOsc = globalAudioCtx.createOscillator();
+                const silentGain = globalAudioCtx.createGain();
+                silentGain.gain.value = 0.001;
+                silentOsc.connect(silentGain);
+                silentGain.connect(globalAudioCtx.destination);
+                silentOsc.start();
+                const osc = globalAudioCtx.createOscillator();
+                const g = globalAudioCtx.createGain();
+                osc.connect(g); g.connect(globalAudioCtx.destination);
+                g.gain.value = 0; osc.start(0);
+                g.gain.setTargetAtTime(0.1, globalAudioCtx.currentTime, 0.01);
+                g.gain.setTargetAtTime(0, globalAudioCtx.currentTime + 0.05, 0.01);
+                osc.stop(globalAudioCtx.currentTime + 0.1);
+                if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
+            } catch(e) {}
+        }
+
+        function forcePlay() {
+            remoteVideo.play().then(() => { document.getElementById('play-overlay').style.display = 'none'; }).catch(e => {});
+            if(!interactionDone) enableAudioAndNotifs();
+        }
+
         document.getElementById('sens-slider').addEventListener('input', function() {
             const val = parseInt(this.value, 10);
             const label = document.getElementById('sens-label');
-
-            if (val === 0) {
-                isSilenced = true;
-                label.innerText = "Silenced";
-                label.style.color = "#ef4444";
-            } else {
-                isSilenced = false;
-                label.innerText = "Sensitivity";
-                label.style.color = "";
-            }
+            if (val === 0) { isSilenced = true; label.innerText = "Silenced"; label.style.color = "#ef4444"; }
+            else { isSilenced = false; label.innerText = "Sensitivity"; label.style.color = ""; }
         });
 
         function playBeep(vol = 1, freq = 800) {
             if (isGlobalMuted || !globalAudioCtx) return;
             try {
-                if (globalAudioCtx.state === 'suspended') {
-                    globalAudioCtx.resume();
-                }
+                if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
                 const osc = globalAudioCtx.createOscillator();
                 const g = globalAudioCtx.createGain();
-                osc.type = 'sine';
-                osc.connect(g);
-                g.connect(globalAudioCtx.destination);
+                osc.type = 'sine'; osc.connect(g); g.connect(globalAudioCtx.destination);
                 osc.frequency.value = freq;
-
                 const now = globalAudioCtx.currentTime;
                 g.gain.setValueAtTime(0, now);
                 g.gain.linearRampToValueAtTime(vol, now + 0.02);
                 g.gain.setValueAtTime(vol, now + 0.2);
                 g.gain.linearRampToValueAtTime(0, now + 0.3);
-
-                osc.start(now);
-                osc.stop(now + 0.35);
-            } catch(e) { console.warn("Beep failed:", e); }
+                osc.start(now); osc.stop(now + 0.35);
+            } catch(e) {}
         }
 
         function triggerMotion() {
             const now = Date.now();
             if (now < gracePeriodEnd || now - lastN < 5000) return;
-
-            if (!isSilenced) {
-                playBeep(1, 800); setTimeout(() => playBeep(1, 800), 300);
-            }
-
+            if (!isSilenced) { playBeep(1, 800); setTimeout(() => playBeep(1, 800), 300); }
             document.body.classList.add('alert-mode'); setTimeout(() => document.body.classList.remove('alert-mode'), 1500);
             lastN = now;
         }
@@ -505,7 +698,7 @@
             if (remoteVideo.paused || remoteVideo.ended) { setTimeout(process, 33); return; }
 
             const now = Date.now();
-            if (gracePeriodEnd > 0 && now >= gracePeriodEnd) { gracePeriodEnd = 0; }
+            if (gracePeriodEnd > 0 && now >= gracePeriodEnd) gracePeriodEnd = 0;
 
             if (remoteVideo.videoWidth > 0 && (canvas.width !== remoteVideo.videoWidth || canvas.height !== remoteVideo.videoHeight)) {
                 canvas.width = remoteVideo.videoWidth; canvas.height = remoteVideo.videoHeight; prev = null;
@@ -546,7 +739,7 @@
                 lastMotionTime = now;
                 if (now - motionStartTime >= targetTime) { triggerMotion(); motionStartTime = 0; }
             } else {
-                if (now - lastMotionTime > maxSilence) { motionStartTime = 0; }
+                if (now - lastMotionTime > maxSilence) motionStartTime = 0;
             }
             setTimeout(process, 33);
         }
