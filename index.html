@@ -20,8 +20,10 @@
     <style>
         :root {
             --bg-dark: #121418; --bg-card: #1e2126; --text-main: #f1f5f9; --text-muted: #94a3b8;
-            --accent: #3b82f6; --green: #10b981; --warning: #f59e0b; --border: #334155;
+            --accent: #7973f0; --green: #10b981; --warning: #f59e0b; --border: #334155;
         }
+
+        * { -webkit-tap-highlight-color: transparent; outline: none; }
 
         body {
             font-family: -apple-system, sans-serif; background: var(--bg-dark); color: var(--text-main);
@@ -29,53 +31,67 @@
             overflow: hidden; transition: background-color 0.4s ease;
         }
 
-        .anim-element { transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), top 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
+        .anim-element { transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), top 0.3s ease; }
 
         /* --- SETUP LAYOUT --- */
         #shared-glimpse { position: absolute; margin: 0; font-weight: 600; letter-spacing: -1px; z-index: 100; }
 
-        .glimpse-center { top: 30dvh; left: 50%; transform: translate(-50%, -50%) scale(2.5); }
+        .glimpse-center { top: 25dvh; left: 50%; transform: translate(-50%, -50%) scale(2.5); }
         .glimpse-top { top: 32px; left: 50%; transform: translate(-50%, -50%) scale(1.2); }
         @supports (padding-top: env(safe-area-inset-top)) { .glimpse-top { top: calc(32px + env(safe-area-inset-top)); } }
 
-        #setup-content { position: absolute; top: calc(30dvh + 60px); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        #setup-content { position: absolute; top: calc(25dvh + 50px); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
         .setup-visible { transform: translateY(0); opacity: 1; pointer-events: auto;}
         .setup-hidden { transform: translateY(100dvh); opacity: 0; pointer-events: none;}
 
         p.subtitle { margin-top: 0; margin-bottom: 25px; color: var(--text-muted); font-size: 1.1em; text-align: center;}
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 250px; min-height: 200px; justify-content: center; }
 
-        #qrcode { background: white; padding: 12px; border-radius: 10px; display: inline-block; margin-bottom: 15px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
-        #qrcode:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 250px; min-height: 250px; justify-content: center; cursor: pointer; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
+        .card.shrinking { transform: scale(0.92); opacity: 0.8; }
+
+        #qrcode-wrapper { width: 160px; height: 160px; margin-bottom: 20px; flex-shrink: 0; }
+        #qrcode { background: white; padding: 12px; border-radius: 10px; width: 100%; height: 100%; box-sizing: border-box; display: flex; justify-content: center; align-items: center; }
+        #qrcode img, #qrcode canvas { width: 100% !important; height: 100% !important; display: block; }
+
         .instruction { color: var(--text-muted); font-size: 0.95em; line-height: 1.4; text-align: center; }
 
         /* --- HEADER & CONTROLS --- */
         header {
             position: absolute; top: 0; left: 0; width: 100%; height: 65px;
             background: var(--bg-card); border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 10; box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 10; box-sizing: border-box;
         }
         @supports (padding-top: env(safe-area-inset-top)) { header { height: calc(65px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); } }
 
-        .status-container { position: absolute; left: 25px; z-index: 11; top: 23px; }
-        .status { font-size: 0.95em; font-weight: 500; color: var(--warning); white-space: nowrap; opacity: 0; transition: opacity 0.3s; }
+        .header-controls { position: absolute; right: 15px; display: flex; gap: 10px; }
+        .icon-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-main); padding: 8px; border-radius: 50%; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .icon-btn:hover { background: rgba(255,255,255,0.1); }
+        .icon-btn svg { width: 22px; height: 22px; fill: currentColor; }
+        .muted-icon { color: #ef4444 !important; }
 
-        #header-controls { position: absolute; right: 25px; top: 15px; display: flex; gap: 10px; z-index: 11; }
-        .controls-hidden { transform: translateX(120vw); }
-        .controls-visible { transform: translateX(0); }
+        .status-banner {
+            position: absolute; top: 65px; left: 0; width: 100%; background: #ef4444; color: white;
+            text-align: center; padding: 10px; font-size: 0.9em; font-weight: 500;
+            transform: translateY(-100%); opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; z-index: 5; box-sizing: border-box;
+        }
+        .status-banner.show { transform: translateY(0); opacity: 1; }
+        .status-banner.info { background: var(--border); color: var(--text-main); }
+        @supports (padding-top: env(safe-area-inset-top)) {
+            .status-banner { top: calc(65px + env(safe-area-inset-top)); }
+        }
 
         button { font-weight: 500; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: background 0.2s; white-space: nowrap; }
         .btn-p { background: var(--accent); color: white; }
-        .btn-s { background: transparent; color: var(--text-main); border: 1px solid var(--border); }
         button:disabled { background: var(--border) !important; color: var(--text-muted) !important; cursor: default; }
 
         /* --- VIEWER CONTENT --- */
         #viewer-main {
-            position: absolute; top: 65px; bottom: 0; left: 0; width: 100%;
+            position: absolute; top: 105px; bottom: 0; left: 0; width: 100%;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px; box-sizing: border-box;
+            padding: 10px 20px max(5vh, 25px) 20px; box-sizing: border-box;
         }
-        @supports (padding-top: env(safe-area-inset-top)) { #viewer-main { top: calc(65px + env(safe-area-inset-top)); } }
+        @supports (padding-top: env(safe-area-inset-top)) { #viewer-main { top: calc(105px + env(safe-area-inset-top)); } }
 
         .viewer-hidden { transform: translateY(100dvh); pointer-events: none; }
         .viewer-visible { transform: translateY(0); pointer-events: auto; }
@@ -91,68 +107,64 @@
         #play-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 20; border-radius: 8px; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
         #play-overlay span { background: var(--accent); color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 1.1em; pointer-events: none; }
 
-        .bottom-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 25px; z-index: 10; width: 100%; flex-shrink: 0; }
-        .btn-t { background: var(--border); color: var(--text-main); min-width: 180px; padding: 12px 16px; }
-        .btn-t.active { background: var(--accent); color: white; }
-        .btn-t.danger { background: #ef4444; color: white; }
+        .bottom-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; z-index: 10; width: 100%; flex-shrink: 0; }
 
-        .slider-group { display: flex; align-items: center; gap: 12px; background: var(--bg-card); border: 1px solid var(--border); padding: 8px 18px; border-radius: 6px; }
-        .slider-group label { font-size: 0.85em; color: var(--text-muted); font-weight: 500; }
+        .btn-t { background: var(--border); color: var(--text-main); min-width: 140px; padding: 12px 16px; border-radius: 6px; font-size: 0.9em;}
+        .btn-t.active { background: var(--accent); color: white; }
+
+        .slider-group { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0; }
+        .slider-group label { font-weight: 500; min-width: 80px; text-align: left; transition: color 0.2s; }
         input[type="range"] { accent-color: var(--accent); cursor: pointer; width: 100px; }
 
         .alert-mode { background-color: #1a0f0f !important; }
         .alert-mode .video-wrapper { border-color: #cc3333; box-shadow: 0 0 0 2px #cc3333, 0 0 30px rgba(204, 51, 51, 0.2); }
-        .manual-call-mode { background-color: #1a150a !important; }
-        .manual-call-mode .video-wrapper { border-color: #d97706; box-shadow: 0 0 0 2px #d97706, 0 0 30px rgba(217, 119, 6, 0.2); }
+        .manual-call-mode { background-color: #0b1120 !important; }
 
-        @media (max-width: 810px) {
-            .status-container { left: 0; top: 120px; width: 100%; text-align: center; }
-            .status { position: static; display: inline-block; }
-
-            #header-controls { top: 65px; right: 0; width: 100vw; justify-content: center; background: var(--bg-dark); padding: 10px 0; }
-            #viewer-main { top: 135px !important; }
-        }
+        .manual-call-mode .video-wrapper { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 0 30px rgba(121, 115, 240, 0.3); }
 
         @media (max-height: 500px) {
-            .glimpse-center { top: 100px; transform: translate(-50%, -50%) scale(1.5); }
-            #setup-content { top: 130px; }
-            .card { padding: 10px 20px; flex-direction: row; gap: 20px; border-radius: 12px; }
-            #qrcode { margin-bottom: 0; padding: 5px; }
-            #qrcode img, #qrcode canvas { width: 90px !important; height: 90px !important; }
+            .glimpse-center { top: 90px; transform: translate(-50%, -50%) scale(1.5); }
+            #setup-content { top: 120px; }
+            .card { padding: 10px 20px; flex-direction: row; gap: 20px; border-radius: 12px; min-height: unset; }
+            #qrcode-wrapper { margin-bottom: 0; width: 90px; height: 90px; }
+            #qrcode { padding: 5px; }
             p.subtitle { margin-bottom: 10px; font-size: 0.9em; }
 
-            #viewer-main { padding: 5px; top: 65px; }
+            #viewer-main { padding: 5px 10px 10px 10px; top: 105px; }
             .bottom-bar { margin-top: 10px; gap: 8px; }
-            .btn-t { min-width: 140px; padding: 8px 12px; font-size: 0.8em; }
-            .slider-group { padding: 5px 12px; }
+            .btn-t { min-width: 120px; padding: 8px 12px; font-size: 0.8em; }
         }
     </style>
 </head>
 <body>
 
-    <header></header>
+    <header>
+        <div class="header-controls">
+            <button id="btn-global-mute" class="icon-btn" onclick="toggleGlobalMute()" title="Toggle All Audio">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            </button>
+            <button class="icon-btn" onclick="triggerReset()" title="New Connection">
+                <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            </button>
+        </div>
+    </header>
 
-    <div class="status-container">
-        <div id="status" class="status">Waiting for Broadcaster</div>
-    </div>
-
-    <div id="header-controls" class="anim-element controls-hidden">
-        <button id="btn-notif" class="btn-p" onclick="enableAudioAndNotifs()">Enable notifications</button>
-        <button class="btn-s" onclick="reset()">New connection</button>
-    </div>
+    <div id="status-banner" class="status-banner info">Waiting for Broadcaster</div>
 
     <h1 id="shared-glimpse" class="anim-element glimpse-center">Glimpse</h1>
 
     <div id="setup-content" class="anim-element setup-visible">
         <p class="subtitle">Local video monitoring</p>
-        <div class="card">
-            <div id="qrcode" onclick="reset()" title="Click to generate a new QR code"></div>
+        <div class="card" onclick="triggerReset()" title="Click to generate a new QR code">
+            <div id="qrcode-wrapper">
+                <div id="qrcode"></div>
+            </div>
             <div class="instruction">Scan the QR code with your camera device<br>to start the session.</div>
         </div>
     </div>
 
     <div id="viewer-main" class="anim-element viewer-hidden">
-        <video id="remote-video" playsinline muted></video>
+        <video id="remote-video" playsinline></video>
         <div class="video-container">
             <div class="video-wrapper">
                 <canvas id="display-canvas"></canvas>
@@ -162,12 +174,12 @@
             </div>
         </div>
         <div id="bottom-bar" class="bottom-bar">
-            <button id="btn-avail" class="btn-t" onclick="toggleAvail()">Mark as Unavailable</button>
-            <div class="slider-group">
-                <label for="sens-slider">Sensitivity</label>
+            <button id="btn-avail" class="btn-t active" onclick="toggleAvail()">Rings Allowed</button>
+
+            <div class="btn-t slider-group">
+                <label id="sens-label" for="sens-slider">Sensitivity</label>
                 <input type="range" id="sens-slider" min="0" max="100" value="80">
             </div>
-            <button id="btn-silence" class="btn-t danger" onclick="toggleSilence()">Starting Engine...</button>
         </div>
     </div>
 
@@ -181,22 +193,30 @@
             if ((e.key === 'c' || e.key === 'C') && !isViewerMode) playForwardAnimation();
         });
 
+        function setPersistentStatus(msg, isInfo = true) {
+            const banner = document.getElementById('status-banner');
+            if (isInfo) banner.classList.add('info'); else banner.classList.remove('info');
+
+            if (msg) {
+                banner.innerText = msg;
+                banner.classList.add('show');
+            } else {
+                banner.classList.remove('show');
+            }
+        }
+
         function playForwardAnimation() {
             if (isViewerMode) return;
             isViewerMode = true;
-            document.getElementById('status').style.opacity = '0';
             document.getElementById('setup-content').className = 'anim-element setup-hidden';
             document.getElementById('shared-glimpse').className = 'anim-element glimpse-top';
-            document.getElementById('header-controls').className = 'anim-element controls-visible';
             document.getElementById('viewer-main').className = 'anim-element viewer-visible';
         }
 
         function playReverseAnimation(onComplete) {
             if (!isViewerMode) return;
             isViewerMode = false;
-            document.getElementById('status').style.opacity = '0';
             document.getElementById('viewer-main').className = 'anim-element viewer-hidden';
-            document.getElementById('header-controls').className = 'anim-element controls-hidden';
             document.getElementById('shared-glimpse').className = 'anim-element glimpse-center';
             document.getElementById('setup-content').className = 'anim-element setup-visible';
             if (onComplete) setTimeout(onComplete, 700);
@@ -210,7 +230,6 @@
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 globalAudioCtx = new AudioContext();
 
-                // iOS Web Audio Hack - Keep a silent oscillator running indefinitely
                 const silentOsc = globalAudioCtx.createOscillator();
                 const silentGain = globalAudioCtx.createGain();
                 silentGain.gain.value = 0.001;
@@ -218,7 +237,6 @@
                 silentGain.connect(globalAudioCtx.destination);
                 silentOsc.start();
 
-                // Play a brief unlocking sound
                 const osc = globalAudioCtx.createOscillator();
                 const g = globalAudioCtx.createGain();
                 osc.connect(g); g.connect(globalAudioCtx.destination);
@@ -232,18 +250,6 @@
                     globalAudioCtx.resume();
                 }
             } catch(e) { console.warn("Audio setup failed:", e); }
-
-            const remoteVideo = document.getElementById('remote-video');
-            if (remoteVideo.srcObject) forcePlay();
-
-            try { if ("Notification" in window) Notification.requestPermission(); } catch(e) {}
-
-            const notifBtn = document.getElementById('btn-notif');
-            if (notifBtn) {
-                notifBtn.innerText = "Audio Enabled";
-                notifBtn.disabled = true;
-                notifBtn.className = "btn-s";
-            }
         }
 
         function forcePlay() {
@@ -265,10 +271,10 @@
         const remoteVideo = document.getElementById('remote-video');
         const canvas = document.getElementById('display-canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const statusEl = document.getElementById('status');
 
         let myId, peer = null, dataConn = null;
-        let isSilenced = false, isAvail = true, gracePeriodEnd = 0, lastN = 0, isCountingDown = false;
+        let isSilenced = false, isAvail = true, gracePeriodEnd = 0, lastN = 0;
+        let isGlobalMuted = false;
 
         function initPeer() {
             myId = genId(12);
@@ -283,8 +289,15 @@
                 text: link, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L
             });
 
-            // Reverted to pure local connection without STUN servers
-            peer = new Peer(myId);
+            const peerOpts = {
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                }
+            };
+            peer = new Peer(myId, peerOpts);
 
             peer.on('call', call => {
                 call.answer();
@@ -292,15 +305,12 @@
                     playForwardAnimation();
 
                     remoteVideo.srcObject = s;
-                    remoteVideo.play().then(() => {
-                        document.getElementById('play-overlay').style.display = 'none';
-                    }).catch(e => {
-                        console.warn("Auto-play blocked by browser");
-                        document.getElementById('play-overlay').style.display = 'flex';
-                    });
+                    remoteVideo.muted = isGlobalMuted;
+
+                    document.getElementById('play-overlay').style.display = 'flex';
+                    remoteVideo.pause();
 
                     gracePeriodEnd = Date.now() + 30000;
-                    updateSilenceBtn();
 
                     let loopStarted = false;
                     const startEngine = () => {
@@ -323,14 +333,14 @@
 
             peer.on('connection', conn => {
                 dataConn = conn;
+                setPersistentStatus("", true);
                 conn.on('data', d => { if (d === 'manual-alert') triggerManual(); });
                 conn.on('close', handleDisconnect);
             });
         }
 
         function handleDisconnect() {
-            statusEl.innerText = "Connection Lost - Waiting...";
-            statusEl.style.opacity = '1';
+            setPersistentStatus("Connection Lost - Waiting...", false);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
@@ -344,45 +354,63 @@
                 remoteVideo.srcObject = null;
             }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            gracePeriodEnd = 0; lastN = 0; motionStartTime = 0; lastMotionTime = 0; isCountingDown = false;
+            gracePeriodEnd = 0; lastN = 0; motionStartTime = 0; lastMotionTime = 0;
+
+            setPersistentStatus("Waiting for Broadcaster", true);
             initPeer();
             playReverseAnimation();
         }
 
+        function triggerReset() {
+            const card = document.querySelector('.card');
+            if (card) card.classList.add('shrinking');
+            setTimeout(() => {
+                reset();
+                if (card) card.classList.remove('shrinking');
+            }, 150);
+        }
+
         initPeer();
+        setPersistentStatus("Waiting for Broadcaster", true);
 
         function toggleAvail() {
             isAvail = !isAvail; const b = document.getElementById('btn-avail');
-            b.innerText = isAvail ? "Mark as Unavailable" : "Mark as Available";
-            b.classList.toggle('active');
+            b.innerText = isAvail ? "Rings Allowed" : "Rings Blocked";
+            if (isAvail) b.classList.add('active'); else b.classList.remove('active');
             if (dataConn) dataConn.send(isAvail ? 'set-available' : 'set-unavailable');
         }
 
-        function updateSilenceBtn() {
-            const b = document.getElementById('btn-silence'), now = Date.now();
-            if (now < gracePeriodEnd) {
-                b.innerText = `Motion Alerts in ${Math.ceil((gracePeriodEnd - now) / 1000)}s`;
-                b.classList.add('danger'); isCountingDown = true;
-            } else if (lastN > 0 && now < lastN + 5000) {
-                b.innerText = `Next Alert in ${Math.ceil(((lastN + 5000) - now) / 1000)}s`;
-                b.classList.add('danger'); isCountingDown = true;
+        function toggleGlobalMute() {
+            isGlobalMuted = !isGlobalMuted;
+            if (remoteVideo) remoteVideo.muted = isGlobalMuted;
+
+            const btn = document.getElementById('btn-global-mute');
+            if (isGlobalMuted) {
+                btn.classList.add('muted-icon');
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
             } else {
-                b.innerText = isSilenced ? "Unsilence Alerts" : "Silence Motion Alerts";
-                if (isSilenced) b.classList.add('danger'); else b.classList.remove('danger');
-                isCountingDown = false;
+                btn.classList.remove('muted-icon');
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
             }
         }
 
-        function toggleSilence() {
-            const now = Date.now();
-            if (now < gracePeriodEnd || (lastN > 0 && now < lastN + 5000)) {
-                gracePeriodEnd = 0; lastN = 0; isSilenced = false;
-            } else { isSilenced = !isSilenced; }
-            updateSilenceBtn();
-        }
+        document.getElementById('sens-slider').addEventListener('input', function() {
+            const val = parseInt(this.value, 10);
+            const label = document.getElementById('sens-label');
+
+            if (val === 0) {
+                isSilenced = true;
+                label.innerText = "Silenced";
+                label.style.color = "#ef4444";
+            } else {
+                isSilenced = false;
+                label.innerText = "Sensitivity";
+                label.style.color = "";
+            }
+        });
 
         function playBeep(vol = 1, freq = 800) {
-            if (!globalAudioCtx) return;
+            if (isGlobalMuted || !globalAudioCtx) return;
             try {
                 if (globalAudioCtx.state === 'suspended') {
                     globalAudioCtx.resume();
@@ -408,12 +436,13 @@
         function triggerMotion() {
             const now = Date.now();
             if (now < gracePeriodEnd || now - lastN < 5000) return;
+
             if (!isSilenced) {
                 playBeep(1, 800); setTimeout(() => playBeep(1, 800), 300);
-                try { if ("Notification" in window && Notification.permission === "granted") new Notification("Glimpse", { body: "Motion detected" }); } catch(e) {}
             }
+
             document.body.classList.add('alert-mode'); setTimeout(() => document.body.classList.remove('alert-mode'), 1500);
-            lastN = now; updateSilenceBtn();
+            lastN = now;
         }
 
         function triggerManual() {
@@ -428,8 +457,7 @@
             if (remoteVideo.paused || remoteVideo.ended) { setTimeout(process, 33); return; }
 
             const now = Date.now();
-            if (now < gracePeriodEnd || (lastN > 0 && now < lastN + 5000)) { updateSilenceBtn(); }
-            else if (isCountingDown || gracePeriodEnd > 0) { gracePeriodEnd = 0; updateSilenceBtn(); }
+            if (gracePeriodEnd > 0 && now >= gracePeriodEnd) { gracePeriodEnd = 0; }
 
             if (remoteVideo.videoWidth > 0 && (canvas.width !== remoteVideo.videoWidth || canvas.height !== remoteVideo.videoHeight)) {
                 canvas.width = remoteVideo.videoWidth; canvas.height = remoteVideo.videoHeight; prev = null;

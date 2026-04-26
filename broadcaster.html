@@ -19,29 +19,49 @@
     <style>
         :root {
             --bg: #121418; --header: #1e2126; --text: #f1f5f9; --muted: #94a3b8;
-            --accent: #3b82f6; --accent-hover: #2563eb;
+            --accent: #7973f0; --accent-hover: #635fc8;
             --green: #10b981; --warning: #f59e0b; --border: #334155;
         }
+
+        * { -webkit-tap-highlight-color: transparent; outline: none; }
+
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
 
         header {
             background: var(--header); border-bottom: 1px solid var(--border);
             height: 65px; display: flex; justify-content: center; align-items: center;
-            position: relative; box-sizing: border-box; flex-shrink: 0;
+            position: relative; box-sizing: border-box; flex-shrink: 0; z-index: 10;
         }
         @supports (padding-top: env(safe-area-inset-top)) {
             header { height: calc(65px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
         }
 
         .brand { font-weight: 600; font-size: 1.2em; letter-spacing: -1px;}
-        .status { position: absolute; left: 25px; font-size: 0.95em; color: var(--warning); white-space: nowrap; opacity: 0; transition: opacity 0.3s; }
 
-        @media (max-width: 810px) {
-            .status { left: 0; top: 75px; width: 100%; text-align: center; }
+        .header-controls { position: absolute; right: 15px; display: flex; gap: 10px; }
+        .icon-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); padding: 8px; border-radius: 50%; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .icon-btn:hover { background: rgba(255,255,255,0.1); }
+        .icon-btn svg { width: 22px; height: 22px; fill: currentColor; }
+        .muted-icon { color: #ef4444 !important; }
+
+        .status-banner {
+            position: absolute; top: 65px; left: 0; width: 100%; background: #ef4444; color: white;
+            text-align: center; padding: 10px; font-size: 0.9em; font-weight: 500;
+            transform: translateY(-100%); opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; z-index: 5; box-sizing: border-box;
+        }
+        .status-banner.show { transform: translateY(0); opacity: 1; }
+        .status-banner.info { background: var(--border); color: var(--text); }
+        @supports (padding-top: env(safe-area-inset-top)) {
+            .status-banner { top: calc(65px + env(safe-area-inset-top)); }
         }
 
-        main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; box-sizing: border-box;}
-        video { width: 45%; max-width: 350px; border-radius: 10px; background: #000; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); max-height: 60dvh;}
+        main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; box-sizing: border-box; z-index: 1;}
+
+        .video-wrapper {
+            position: relative; background: #0a0c10; border: 1px solid #2a3140; border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+            padding: 3px; display: inline-flex; box-sizing: border-box; margin-bottom: 20px; width: 45%; max-width: 350px;
+        }
+        video { width: 100%; border-radius: 5px; background: #000; max-height: 60dvh; display: block; object-fit: cover;}
 
         .btn-ring { background: var(--accent); color: white; padding: 20px 20px; font-size: 1.8em; border: none; border-radius: 12px; width: 90%; max-width: 500px; cursor: pointer; font-weight: 600; transition: 0.2s; margin-bottom: 20px; flex-shrink: 0;}
         .btn-ring:hover:not(:disabled):not(.unavailable) { background: var(--accent-hover); transform: translateY(-3px); }
@@ -49,54 +69,144 @@
 
         @media (max-height: 500px) {
             main { padding: 10px; }
-            video { margin-bottom: 10px; max-height: 50dvh; width: auto; }
+            .video-wrapper { margin-bottom: 10px; width: auto; max-height: 50dvh; }
+            video { width: auto; max-height: calc(50dvh - 6px); }
             .btn-ring { padding: 12px; font-size: 1.3em; margin-bottom: 5px; }
         }
     </style>
 </head>
 <body>
     <header>
-        <div id="status" class="status">Connecting...</div>
         <div class="brand">Glimpse</div>
+        <div class="header-controls">
+            <button id="mute-btn" class="icon-btn muted-icon" onclick="toggleMute()" title="Toggle Microphone">
+                <svg viewBox="0 0 24 24"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02 3.28c-.91.73-2.05 1.22-3.28 1.22-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c3.39-.49 6-3.39 6-6.92h-1.7c0 1.23-.49 2.37-1.22 3.28zM4.27 3L3 4.27l6 6V11c0 1.66 1.34 3 3 3 .23 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c2.11-.3 3.96-1.39 5.22-2.95l2.51 2.51 1.27-1.27L4.27 3zM12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>
+            </button>
+        </div>
     </header>
+    <div id="status-banner" class="status-banner info">Connecting...</div>
+
     <main>
-        <video id="local-video" autoplay playsinline muted></video>
+        <div class="video-wrapper">
+            <video id="local-video" autoplay playsinline muted></video>
+        </div>
         <button id="ring-btn" class="btn-ring" onclick="sendRing()" disabled>Ring Viewer</button>
     </main>
+
     <script>
         window.onerror = function(msg, url, lineNo, columnNo, error) {
-            const statusEl = document.getElementById('status');
-            if(statusEl) {
-                statusEl.style.opacity = '1';
-                statusEl.innerText = "System Crash: " + msg;
-                statusEl.style.color = "#ef4444";
-            }
+            setPersistentStatus("System Crash: " + msg, false);
             return false;
         };
 
         const TARGET_ID = window.location.hash.substring(1);
         if (window.location.hash) window.history.replaceState(null, null, window.location.pathname);
 
-        const statusEl = document.getElementById('status');
         const ringBtn = document.getElementById('ring-btn');
 
         let dataConn = null, currentCall = null, isAvail = true, localStream = null;
         let isRetrying = false, retryCount = 0, retryTimer = null;
         const MAX_RETRIES = 10;
         let isPeerOpen = false;
+        let hasAudio = false;
 
-        // Reverted to pure local connection without STUN servers
-        const peer = new Peer();
+        let persistentStatus = "Connecting...";
+        let tempTimer = null;
+
+        function setPersistentStatus(msg, isInfo = true) {
+            persistentStatus = msg;
+            if (!tempTimer) {
+                const banner = document.getElementById('status-banner');
+                if (isInfo) banner.classList.add('info'); else banner.classList.remove('info');
+
+                if (msg) {
+                    banner.innerText = msg;
+                    banner.classList.add('show');
+                } else {
+                    banner.classList.remove('show');
+                }
+            }
+        }
+
+        function showNotification(msg, duration = 0, isInfo = false) {
+            const banner = document.getElementById('status-banner');
+            banner.innerText = msg;
+            if (isInfo) banner.classList.add('info'); else banner.classList.remove('info');
+            banner.classList.add('show');
+
+            if (tempTimer) clearTimeout(tempTimer);
+            if (duration > 0) {
+                tempTimer = setTimeout(() => {
+                    tempTimer = null;
+                    if (persistentStatus) {
+                        banner.innerText = persistentStatus;
+                        if (persistentStatus.includes('Error') || persistentStatus.includes('Failed')) {
+                            banner.classList.remove('info');
+                        } else {
+                            banner.classList.add('info');
+                        }
+                    } else {
+                        banner.classList.remove('show');
+                    }
+                }, duration);
+            } else {
+                tempTimer = null;
+                if (!msg) banner.classList.remove('show');
+            }
+        }
+
+        function updateMuteIcon() {
+            const btn = document.getElementById('mute-btn');
+            const isMuted = !hasAudio || !localStream.getAudioTracks()[0].enabled;
+            if (isMuted) {
+                btn.classList.add('muted-icon');
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02 3.28c-.91.73-2.05 1.22-3.28 1.22-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c3.39-.49 6-3.39 6-6.92h-1.7c0 1.23-.49 2.37-1.22 3.28zM4.27 3L3 4.27l6 6V11c0 1.66 1.34 3 3 3 .23 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c2.11-.3 3.96-1.39 5.22-2.95l2.51 2.51 1.27-1.27L4.27 3zM12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>`;
+            } else {
+                btn.classList.remove('muted-icon');
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c3.39-.49 6-3.39 6-6.92h-1.7z"/></svg>`;
+            }
+        }
+
+        function toggleMute() {
+            if (hasAudio) {
+                const track = localStream.getAudioTracks()[0];
+                track.enabled = !track.enabled;
+                updateMuteIcon();
+            } else {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        const audioTrack = stream.getAudioTracks()[0];
+                        localStream.addTrack(audioTrack);
+                        hasAudio = true;
+                        updateMuteIcon();
+
+                        if (currentCall) currentCall.close();
+                        attemptConnect();
+                    })
+                    .catch(err => {
+                        showNotification("Microphone permissions not granted", 2000, false);
+                    });
+            }
+        }
+
+        const peerOpts = {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
+        };
+        const peer = new Peer(peerOpts);
 
         if (!TARGET_ID) {
-            statusEl.style.opacity = '1';
-            statusEl.innerText = "Scan QR code";
-            statusEl.style.color = "#ef4444";
+            setPersistentStatus("The Missing Id. Scan QR code on Monitor", false);
         } else {
-            const constraints = { video: { facingMode: "environment" }, audio: false };
-
-            const handleSuccess = function(stream) {
+            const handleSuccess = function(stream, requestedAudio) {
                 localStream = stream;
+                hasAudio = requestedAudio && stream.getAudioTracks().length > 0;
+                updateMuteIcon();
+
                 const videoEl = document.getElementById('local-video');
                 videoEl.srcObject = stream;
                 videoEl.play().catch(e => console.log("Auto-play prevented:", e));
@@ -104,23 +214,32 @@
                 if(isPeerOpen && !isRetrying) attemptConnect();
             };
 
-            const handleError = function(err) {
-                statusEl.style.opacity = '1';
-                statusEl.innerText = "Camera Error: " + (err.name || "Access Denied");
-                statusEl.style.color = "#ef4444";
+            const initCamera = (requestAudio) => {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: requestAudio })
+                    .then(stream => handleSuccess(stream, requestAudio))
+                    .catch(err => {
+                        if (requestAudio) {
+                            console.warn("Audio failed, trying video only");
+                            initCamera(false);
+                        } else {
+                            setPersistentStatus("Camera Access Blocked", false);
+                            ringBtn.disabled = false;
+                            ringBtn.innerText = "Enable Camera";
+                            ringBtn.classList.remove('unavailable');
+                            ringBtn.onclick = () => {
+                                ringBtn.disabled = true;
+                                ringBtn.innerText = "Requesting...";
+                                initCamera(true);
+                                ringBtn.onclick = sendRing;
+                            };
+                        }
+                    });
             };
 
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia(constraints).then(handleSuccess).catch(handleError);
+                initCamera(true);
             } else {
-                const legacyGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
-                if (legacyGetUserMedia) {
-                    legacyGetUserMedia.call(navigator, constraints, handleSuccess, handleError);
-                } else {
-                    statusEl.style.opacity = '1';
-                    statusEl.innerText = "Camera API not supported";
-                    statusEl.style.color = "#ef4444";
-                }
+                setPersistentStatus("Camera API not supported", false);
             }
         }
 
@@ -139,17 +258,14 @@
             if (currentCall) { currentCall.close(); currentCall = null; }
 
             ringBtn.disabled = true;
-            statusEl.style.opacity = '1';
 
             if (retryCount >= MAX_RETRIES) {
-                statusEl.innerText = "Connection Failed. Refresh.";
-                statusEl.style.color = "#ef4444";
+                setPersistentStatus("Connection Failed. Refresh.", false);
                 return;
             }
 
             retryCount++;
-            statusEl.innerText = `Retrying (${retryCount}/${MAX_RETRIES})...`;
-            statusEl.style.color = "";
+            setPersistentStatus(`Retrying (${retryCount}/${MAX_RETRIES})...`, true);
 
             if (retryTimer) clearTimeout(retryTimer);
             retryTimer = setTimeout(() => { isRetrying = false; attemptConnect(); }, 3000);
@@ -159,11 +275,7 @@
             if (isRetrying || !localStream || !isPeerOpen || peer.destroyed) return;
             if (peer.disconnected) peer.reconnect();
 
-            if (retryCount === 0) {
-                statusEl.style.opacity = '1';
-                statusEl.innerText = "Finding Monitor...";
-                statusEl.style.color = "";
-            }
+            if (retryCount === 0) setPersistentStatus("Finding Monitor...", true);
 
             currentCall = peer.call(TARGET_ID, localStream);
             dataConn = peer.connect(TARGET_ID);
@@ -171,8 +283,9 @@
             if (dataConn) {
                 dataConn.on('open', () => {
                     retryCount = 0;
-                    statusEl.style.opacity = '0';
+                    setPersistentStatus("");
                     ringBtn.disabled = false;
+                    ringBtn.innerText = isAvail ? "Ring Viewer" : "Viewer Unavailable";
                 });
                 dataConn.on('data', data => {
                     if (data === 'set-unavailable') {
