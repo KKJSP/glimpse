@@ -36,11 +36,11 @@
         /* --- SETUP LAYOUT --- */
         #shared-glimpse { position: absolute; margin: 0; font-weight: 600; letter-spacing: -1px; z-index: 100; }
 
-        .glimpse-center { top: 25dvh; left: 50%; transform: translate(-50%, -50%) scale(2.5); }
+        .glimpse-center { top: 28dvh; left: 50%; transform: translate(-50%, -50%) scale(2.5); }
         .glimpse-top { top: 32px; left: 50%; transform: translate(-50%, -50%) scale(1.2); }
         @supports (padding-top: env(safe-area-inset-top)) { .glimpse-top { top: calc(32px + env(safe-area-inset-top)); } }
 
-        #setup-content { position: absolute; top: calc(25dvh + 50px); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        #setup-content { position: absolute; top: calc(28dvh + 50px); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
         .setup-visible { transform: translateY(0); opacity: 1; pointer-events: auto;}
         .setup-hidden { transform: translateY(100dvh); opacity: 0; pointer-events: none;}
 
@@ -56,6 +56,11 @@
 
         .instruction { color: var(--text-muted); font-size: 0.95em; line-height: 1.4; text-align: center; }
 
+        .manual-join { margin-top: 25px; display: flex; gap: 8px; width: 100%; max-width: 310px; opacity: 0.8; transition: opacity 0.2s; }
+        .manual-join:focus-within { opacity: 1; }
+        .manual-join input { flex: 1; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); font-size: 0.95em; outline: none; font-family: monospace; letter-spacing: 1px; }
+        .manual-join input:focus { border-color: var(--accent); }
+
         /* --- HEADER & CONTROLS --- */
         header {
             position: absolute; top: 0; left: 0; width: 100%; height: 65px;
@@ -64,7 +69,10 @@
         }
         @supports (padding-top: env(safe-area-inset-top)) { header { height: calc(65px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); } }
 
-        .header-controls { position: absolute; right: 15px; display: flex; gap: 10px; }
+        .header-controls { position: absolute; right: 15px; display: flex; gap: 10px; transition: opacity 0.4s ease, transform 0.4s ease; }
+        .controls-hidden { opacity: 0; pointer-events: none; transform: translateY(-10px); }
+        .controls-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
         .icon-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-main); padding: 8px; border-radius: 50%; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
         .icon-btn:hover { background: rgba(255,255,255,0.1); }
         .icon-btn svg { width: 22px; height: 22px; fill: currentColor; }
@@ -119,16 +127,16 @@
         .alert-mode { background-color: #1a0f0f !important; }
         .alert-mode .video-wrapper { border-color: #cc3333; box-shadow: 0 0 0 2px #cc3333, 0 0 30px rgba(204, 51, 51, 0.2); }
         .manual-call-mode { background-color: #0b1120 !important; }
-
         .manual-call-mode .video-wrapper { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 0 30px rgba(121, 115, 240, 0.3); }
 
         @media (max-height: 500px) {
-            .glimpse-center { top: 90px; transform: translate(-50%, -50%) scale(1.5); }
-            #setup-content { top: 120px; }
+            .glimpse-center { top: 100px; transform: translate(-50%, -50%) scale(1.5); }
+            #setup-content { top: 130px; }
             .card { padding: 10px 20px; flex-direction: row; gap: 20px; border-radius: 12px; min-height: unset; }
             #qrcode-wrapper { margin-bottom: 0; width: 90px; height: 90px; }
             #qrcode { padding: 5px; }
             p.subtitle { margin-bottom: 10px; font-size: 0.9em; }
+            .manual-join { margin-top: 15px; }
 
             #viewer-main { padding: 5px 10px 10px 10px; top: 105px; }
             .bottom-bar { margin-top: 10px; gap: 8px; }
@@ -139,12 +147,12 @@
 <body>
 
     <header>
-        <div class="header-controls">
+        <div id="header-controls" class="header-controls anim-element controls-hidden">
             <button id="btn-global-mute" class="icon-btn" onclick="toggleGlobalMute()" title="Toggle All Audio">
                 <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
             </button>
-            <button class="icon-btn" onclick="triggerReset()" title="New Connection">
-                <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            <button class="icon-btn" onclick="closeViewerSession()" title="Close Connection">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
             </button>
         </div>
     </header>
@@ -160,6 +168,12 @@
                 <div id="qrcode"></div>
             </div>
             <div class="instruction">Scan the QR code with your camera device<br>to start the session.</div>
+            <div id="qr-id-display" style="margin-top: 10px; font-family: monospace; font-size: 1.1em; color: var(--accent); font-weight: 600; letter-spacing: 2px;"></div>
+        </div>
+
+        <div class="manual-join">
+            <input type="text" id="manual-id" placeholder="Or Enter ID to broadcast" autocomplete="off">
+            <button class="btn-p" onclick="joinAsBroadcaster()">Broadcast</button>
         </div>
     </div>
 
@@ -211,6 +225,7 @@
             document.getElementById('setup-content').className = 'anim-element setup-hidden';
             document.getElementById('shared-glimpse').className = 'anim-element glimpse-top';
             document.getElementById('viewer-main').className = 'anim-element viewer-visible';
+            document.getElementById('header-controls').className = 'header-controls anim-element controls-visible';
         }
 
         function playReverseAnimation(onComplete) {
@@ -219,6 +234,7 @@
             document.getElementById('viewer-main').className = 'anim-element viewer-hidden';
             document.getElementById('shared-glimpse').className = 'anim-element glimpse-center';
             document.getElementById('setup-content').className = 'anim-element setup-visible';
+            document.getElementById('header-controls').className = 'header-controls anim-element controls-hidden';
             if (onComplete) setTimeout(onComplete, 700);
         }
 
@@ -260,12 +276,19 @@
             if(!interactionDone) enableAudioAndNotifs();
         }
 
-        function genId(len) {
-            if (window.crypto && window.crypto.getRandomValues) {
-                const arr = new Uint8Array(len); window.crypto.getRandomValues(arr);
-                return Array.from(arr, b => b.toString(36).padStart(2, '0')).join('').substring(0, len);
+        function genId() {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            const nums = '0123456789';
+            let id = nums[Math.floor(Math.random() * 10)];
+            for (let i = 0; i < 5; i++) {
+                id += chars[Math.floor(Math.random() * chars.length)];
             }
-            return Math.random().toString(36).substring(2, len + 2);
+            return id;
+        }
+
+        function joinAsBroadcaster() {
+            const id = document.getElementById('manual-id').value.trim().toLowerCase();
+            if(id) window.location.href = 'broadcaster.html#' + id;
         }
 
         const remoteVideo = document.getElementById('remote-video');
@@ -275,12 +298,14 @@
         let myId, peer = null, dataConn = null;
         let isSilenced = false, isAvail = true, gracePeriodEnd = 0, lastN = 0;
         let isGlobalMuted = false;
+        let isClosedByBroadcaster = false;
 
         function initPeer() {
-            myId = genId(12);
+            myId = genId();
             try {
                 const stored = localStorage.getItem('glimpseDynamicId');
-                if (stored) { myId = stored; } else { localStorage.setItem('glimpseDynamicId', myId); }
+                if (stored && stored.length === 6) { myId = stored; }
+                else { localStorage.setItem('glimpseDynamicId', myId); }
             } catch(e) {}
 
             const link = new URL('broadcaster.html#' + myId, window.location.href).href;
@@ -288,6 +313,8 @@
             new QRCode(document.getElementById("qrcode"), {
                 text: link, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L
             });
+
+            document.getElementById("qr-id-display").innerText = myId;
 
             const peerOpts = {
                 config: {
@@ -334,14 +361,34 @@
             peer.on('connection', conn => {
                 dataConn = conn;
                 setPersistentStatus("", true);
-                conn.on('data', d => { if (d === 'manual-alert') triggerManual(); });
+                conn.on('data', d => {
+                    if (d === 'manual-alert') triggerManual();
+                    else if (d === 'broadcaster-closed') {
+                        isClosedByBroadcaster = true;
+                        handleDisconnect();
+                    }
+                });
                 conn.on('close', handleDisconnect);
             });
         }
 
         function handleDisconnect() {
-            setPersistentStatus("Connection Lost - Waiting...", false);
+            if (isClosedByBroadcaster) {
+                setPersistentStatus("Broadcaster closed the session", false);
+                isClosedByBroadcaster = false;
+            } else {
+                setPersistentStatus("Connection Lost - Waiting...", false);
+            }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function closeViewerSession() {
+            if (dataConn && dataConn.open) {
+                dataConn.send('viewer-closed');
+            }
+            setTimeout(() => {
+                reset();
+            }, 150);
         }
 
         function reset() {
@@ -355,6 +402,7 @@
             }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             gracePeriodEnd = 0; lastN = 0; motionStartTime = 0; lastMotionTime = 0;
+            isClosedByBroadcaster = false;
 
             setPersistentStatus("Waiting for Broadcaster", true);
             initPeer();
