@@ -15,7 +15,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#121418">
 
-    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.3.2/dist/peerjs.min.js"></script>
     <style>
         :root {
             --bg-dark: #121418; --bg-card: #1e2126; --text-main: #f1f5f9; --text-muted: #94a3b8;
@@ -27,7 +27,7 @@
 
         body {
             font-family: -apple-system, sans-serif; background: var(--bg-dark); color: var(--text-main);
-            margin: 0; position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: 100dvh; width: 100dvw;
+            margin: 0; position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: 100vh; width: 100dvw;
             overflow: hidden; transition: background-color 0.4s ease;
         }
 
@@ -36,7 +36,7 @@
         /* --- SHARED HEADER & GLIMPSE TEXT --- */
         #shared-glimpse { position: absolute; margin: 0; font-weight: 600; letter-spacing: -1px; z-index: 100; }
 
-        .glimpse-center { top: 30dvh; left: 50%; transform: translate(-50%, -50%) scale(2.5); }
+        .glimpse-center { top: 30vh; left: 50%; transform: translate(-50%, -50%) scale(2.5); }
         .glimpse-top { top: 32px; left: 50%; transform: translate(-50%, -50%) scale(1.2); }
         @supports (padding-top: env(safe-area-inset-top)) { .glimpse-top { top: calc(32px + env(safe-area-inset-top)); } }
 
@@ -68,8 +68,8 @@
         @supports (padding-top: env(safe-area-inset-top)) { .status-banner { top: calc(65px + env(safe-area-inset-top)); } }
 
         /* --- HUB VIEW (SETUP) --- */
-        #hub-view { position: absolute; top: calc(30dvh + 55px); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
-        .view-hidden { transform: translateY(100dvh); opacity: 0; pointer-events: none; }
+        #hub-view { position: absolute; top: calc(30vh + 55px); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .view-hidden { transform: translateY(100vh); opacity: 0; pointer-events: none; }
         .view-visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
 
         /* Smart Keyboard Shift */
@@ -486,9 +486,6 @@
                         let loopStarted = false;
 
                         remoteVideo.onloadedmetadata = () => {
-                            if (remoteVideo.videoWidth > 0) {
-                                canvas.style.aspectRatio = `${remoteVideo.videoWidth} / ${remoteVideo.videoHeight}`;
-                            }
                             if (!loopStarted) {
                                 loopStarted = true;
                                 canvas.width = remoteVideo.videoWidth || 640;
@@ -565,11 +562,6 @@
 
                 if (videoEl.srcObject !== stream) {
                     videoEl.srcObject = stream;
-                    videoEl.onloadedmetadata = () => {
-                        if (videoEl.videoWidth > 0) {
-                            videoEl.style.aspectRatio = `${videoEl.videoWidth} / ${videoEl.videoHeight}`;
-                        }
-                    };
                     videoEl.play().catch(e => {
                         if (e.name !== 'AbortError') console.warn("Auto-play prevented:", e);
                     });
@@ -647,11 +639,6 @@
 
                 if (videoEl.srcObject !== stream) {
                     videoEl.srcObject = stream;
-                    videoEl.onloadedmetadata = () => {
-                        if (videoEl.videoWidth > 0) {
-                            videoEl.style.aspectRatio = `${videoEl.videoWidth} / ${videoEl.videoHeight}`;
-                        }
-                    };
                     videoEl.play().catch(e => {
                         if (e.name !== 'AbortError') console.warn("Auto-play prevented:", e);
                     });
@@ -746,7 +733,6 @@
             const idVal = document.getElementById('session-id').value.trim();
             setPersistentStatus("Connection Lost", false);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            canvas.style.aspectRatio = "auto";
 
             setTimeout(() => {
                 isHandlingDisconnect = false;
@@ -769,7 +755,6 @@
                 ringBtn.classList.add('unavailable');
             } else {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                canvas.style.aspectRatio = "auto";
             }
 
             setPersistentStatus(msg, false);
@@ -824,7 +809,6 @@
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            canvas.style.aspectRatio = "auto";
             gracePeriodEnd = 0; lastN = 0; motionStartTime = 0; lastMotionTime = 0;
 
             returnToHub();
@@ -965,7 +949,6 @@
                 if (remoteVideo.videoWidth > 0) {
                     canvas.width = remoteVideo.videoWidth;
                     canvas.height = remoteVideo.videoHeight;
-                    canvas.style.aspectRatio = `${remoteVideo.videoWidth} / ${remoteVideo.videoHeight}`;
                 }
                 prev = null;
 
