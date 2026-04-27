@@ -184,7 +184,8 @@
         #broadcaster-view video { position: relative; opacity: 1; pointer-events: auto; z-index: 1;}
 
         .flip-btn {
-            position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.6);
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
             border: 1px solid rgba(255,255,255,0.2); z-index: 10; padding: 12px;
             border-radius: 50%; display: none; align-items: center; justify-content: center;
             backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
@@ -217,7 +218,7 @@
             .bottom-bar { margin-top: 10px; gap: 8px; }
             .btn-t { min-width: 120px; padding: 8px 12px; font-size: 0.8em; }
             .btn-ring { padding: 12px; font-size: 1.1em; margin-top: 10px; }
-            .flip-btn { bottom: 10px; right: 10px; padding: 8px; }
+            .flip-btn { bottom: 10px; right: auto; left: 50%; transform: translateX(-50%); padding: 8px; }
         }
     </style>
 </head>
@@ -270,7 +271,7 @@
             <button id="btn-avail" class="btn-t active" onclick="toggleAvail()">Rings Allowed</button>
             <div class="btn-t slider-group">
                 <label id="sens-label" for="sens-slider">Sensitivity</label>
-                <input type="range" id="sens-slider" min="0" max="100" value="80">
+                <input type="range" id="sens-slider" min="0" max="100" value="50">
             </div>
         </div>
     </div>
@@ -281,7 +282,7 @@
                 <video id="local-video" autoplay playsinline muted></video>
                 <button id="flip-camera-btn" class="icon-btn flip-btn" onclick="flipCamera()" title="Flip Camera">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 7H17.5L15.5 4H8.5L6.5 7H3C1.895 7 1 7.895 1 9V19C1 20.105 1.895 21 3 21H21C22.105 21 23 20.105 23 19V9C23 7.895 22.105 7 21 7Z"/>
+                        <path d="M21 7H17.5L15.5 4H8.5L6.5 7H3C1.895 7 1 7.895 1 9V19C1 20.105 1.895 21 3 21H21C22.105 21 23 20.105 23 19V9C23 7.895 22.105 7 21 7Z" fill="transparent"/>
 
                         <path d="M12 16.5a2.49 2.49 0 0 1 -1.76 -4.27" />
                         <path d="M12 11.5a2.49 2.49 0 0 1 1.76 4.27" />
@@ -950,6 +951,8 @@
         }
 
         let prev = null, motionStartTime = 0, lastMotionTime = 0;
+        let blockHistory = null, blockActiveCounts = null, historyIndex = 0;
+        const HISTORY_LENGTH = 300; // Tracks the last ~10 seconds of frames
 
         function process() {
             if (!processLoopActive) return;
@@ -958,15 +961,26 @@
             const now = Date.now();
             if (gracePeriodEnd > 0 && now >= gracePeriodEnd) gracePeriodEnd = 0;
 
-            if (remoteVideo.videoWidth > 0 && (canvas.width !== remoteVideo.videoWidth || canvas.height !== remoteVideo.videoHeight)) {
-                canvas.width = remoteVideo.videoWidth; canvas.height = remoteVideo.videoHeight;
-                canvas.style.aspectRatio = `${remoteVideo.videoWidth} / ${remoteVideo.videoHeight}`;
+            if (blockHistory === null || (remoteVideo.videoWidth > 0 && (canvas.width !== remoteVideo.videoWidth || canvas.height !== remoteVideo.videoHeight))) {
+                if (remoteVideo.videoWidth > 0) {
+                    canvas.width = remoteVideo.videoWidth;
+                    canvas.height = remoteVideo.videoHeight;
+                    canvas.style.aspectRatio = `${remoteVideo.videoWidth} / ${remoteVideo.videoHeight}`;
+                }
                 prev = null;
+
+                const cols = Math.ceil(canvas.width / 20) || 1;
+                const rows = Math.ceil(canvas.height / 20) || 1;
+                const numBlocks = cols * rows;
+                blockHistory = new Uint8Array(numBlocks * HISTORY_LENGTH);
+                blockActiveCounts = new Uint32Array(numBlocks);
+                historyIndex = 0;
             }
 
             ctx.drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
             const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
             let moving = 0;
+            const cols = Math.ceil(canvas.width / 20);
 
             if (prev) {
                 for (let y = 0; y < canvas.height; y += 20) {
@@ -974,13 +988,40 @@
                         let diff = 0;
                         for (let by = 0; by < 20; by += 2) {
                             for (let bx = 0; bx < 20; bx += 2) {
+                                // Boundary protection for irregular resolutions
+                                if (y + by >= canvas.height || x + bx >= canvas.width) continue;
                                 const i = ((y + by) * canvas.width + (x + bx)) * 4;
                                 if (Math.abs(data[i] - prev[i]) + Math.abs(data[i+1] - prev[i+1]) + Math.abs(data[i+2] - prev[i+2]) > 35) diff++;
                             }
                         }
-                        if (diff > 4) { moving++; ctx.strokeStyle = 'rgba(16, 185, 129, 0.8)'; ctx.strokeRect(x, y, 20, 20); }
+
+                        const blockX = x / 20;
+                        const blockY = y / 20;
+                        const blockIdx = blockY * cols + blockX;
+                        const histIdx = blockIdx * HISTORY_LENGTH + historyIndex;
+
+                        const isMoving = diff > 4 ? 1 : 0;
+                        const oldVal = blockHistory[histIdx];
+
+                        // Update the running history and counts
+                        blockHistory[histIdx] = isMoving;
+                        blockActiveCounts[blockIdx] = blockActiveCounts[blockIdx] - oldVal + isMoving;
+
+                        if (isMoving) {
+                            if (blockActiveCounts[blockIdx] / HISTORY_LENGTH > 0.05) {
+                                // Ignore repetitive motion (Draw Blue)
+                                ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)';
+                                ctx.strokeRect(x, y, 20, 20);
+                            } else {
+                                // Count as valid motion (Draw Red)
+                                moving++;
+                                ctx.strokeStyle = 'rgba(246, 81, 59, 0.8)';
+                                ctx.strokeRect(x, y, 20, 20);
+                            }
+                        }
                     }
                 }
+                historyIndex = (historyIndex + 1) % HISTORY_LENGTH;
             }
 
             prev = new Uint8ClampedArray(data);
