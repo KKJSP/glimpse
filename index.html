@@ -16,7 +16,6 @@
     <meta name="theme-color" content="#121418">
 
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
             --bg-dark: #121418; --bg-card: #1e2126; --text-main: #f1f5f9; --text-muted: #94a3b8;
@@ -34,7 +33,9 @@
 
         .anim-element { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), top 0.4s ease; }
 
+        /* --- SHARED HEADER & GLIMPSE TEXT --- */
         #shared-glimpse { position: absolute; margin: 0; font-weight: 600; letter-spacing: -1px; z-index: 100; }
+
         .glimpse-center { top: 30dvh; left: 50%; transform: translate(-50%, -50%) scale(2.5); }
         .glimpse-top { top: 32px; left: 50%; transform: translate(-50%, -50%) scale(1.2); }
         @supports (padding-top: env(safe-area-inset-top)) { .glimpse-top { top: calc(32px + env(safe-area-inset-top)); } }
@@ -45,6 +46,8 @@
             display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 10; box-sizing: border-box;
         }
         @supports (padding-top: env(safe-area-inset-top)) { header { height: calc(65px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); } }
+
+        .header-logo { position: absolute; left: 15px; width: 28px; height: 28px; filter: invert(1); opacity: 0.9; }
 
         .header-controls { position: absolute; right: 15px; display: flex; gap: 10px; transition: opacity 0.4s ease, transform 0.4s ease; }
         .controls-hidden { opacity: 0; pointer-events: none; transform: translateY(-10px); }
@@ -64,30 +67,64 @@
         .status-banner.info { background: var(--border); color: var(--text-main); }
         @supports (padding-top: env(safe-area-inset-top)) { .status-banner { top: calc(65px + env(safe-area-inset-top)); } }
 
+        /* --- HUB VIEW (SETUP) --- */
         #hub-view { position: absolute; top: calc(30dvh + 55px); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
         .view-hidden { transform: translateY(100dvh); opacity: 0; pointer-events: none; }
         .view-visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
 
+        /* Smart Keyboard Shift */
+        body.keyboard-open #hub-view.view-visible { transform: translateY(-80px); }
+        body.keyboard-open #shared-glimpse.glimpse-center { transform: translate(-50%, calc(-50% - 80px)) scale(2.5); }
+        @media (max-height: 600px) {
+            body.keyboard-open #hub-view.view-visible { transform: translateY(-120px); }
+            body.keyboard-open #shared-glimpse.glimpse-center { transform: translate(-50%, calc(-50% - 120px)) scale(2.5); }
+        }
+
         p.subtitle { margin-top: 0; margin-bottom: 25px; color: var(--text-muted); font-size: 1.1em; text-align: center;}
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 250px; min-height: 250px; justify-content: center; cursor: pointer; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
-        .card.shrinking { transform: scale(0.92); opacity: 0.8; }
 
-        #qrcode-wrapper { width: 160px; height: 160px; margin-bottom: 20px; flex-shrink: 0; }
-        #qrcode { background: white; padding: 12px; border-radius: 10px; width: 100%; height: 100%; box-sizing: border-box; display: flex; justify-content: center; align-items: center; }
-        #qrcode img, #qrcode canvas { width: 100% !important; height: 100% !important; display: block; }
-        .instruction { color: var(--text-muted); font-size: 0.95em; line-height: 1.4; text-align: center; }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 280px; max-width: 320px; justify-content: center; }
 
-        .manual-join { margin-top: 25px; display: flex; gap: 8px; width: 100%; max-width: 310px; opacity: 0.8; transition: opacity 0.2s; }
+        .instruction-title { color: var(--text-main); font-size: 1.1em; font-weight: 600; margin-bottom: 15px; letter-spacing: -0.5px;}
+        .instruction-sub { color: var(--text-muted); font-size: 0.85em; text-align: center; margin-top: 20px; line-height: 1.4; }
+
+        .manual-join {
+            position: relative; margin-top: 10px; width: 100%; height: 110px;
+            opacity: 0.8; transition: opacity 0.2s;
+        }
         .manual-join:focus-within { opacity: 1; }
-        /* Adjusted input to handle numbers specifically well */
-        .manual-join input { flex: 1; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); font-size: 1em; outline: none; font-family: monospace; letter-spacing: 2px; text-align: center;}
-        .manual-join input:focus { border-color: var(--accent); }
 
-        button { font-weight: 500; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: background 0.2s; white-space: nowrap; }
-        .btn-p { background: var(--accent); color: white; }
-        button:disabled { background: var(--border) !important; color: var(--text-muted) !important; cursor: default; }
+        .input-bg {
+            position: absolute; top: 0; left: 0; right: 0; height: 50px;
+            border-radius: 8px; border: 1px solid var(--border);
+            background: var(--bg-dark); pointer-events: none; transition: 0.2s; z-index: 1;
+        }
 
+        #session-id {
+            position: absolute; top: 0; left: 0; width: 100%; height: 110px;
+            padding: 16px 15px 76px 15px;
+            border: none; background: transparent; color: var(--accent);
+            font-size: 1.1em; font-weight: 600; outline: none; font-family: monospace;
+            letter-spacing: 1px; text-align: center; box-sizing: border-box; z-index: 2;
+            -webkit-appearance: none; scroll-margin-bottom: 20px;
+        }
+        #session-id:focus + .input-bg { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(121, 115, 240, 0.2); }
+
+        .hub-actions {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            display: flex; gap: 10px; z-index: 3;
+        }
+
+        button { font-weight: 600; border: none; padding: 12px 16px; border-radius: 8px; cursor: pointer; font-size: 0.95em; transition: background 0.2s, transform 0.1s, opacity 0.2s, filter 0.2s; white-space: nowrap; }
+        button:active:not(:disabled):not(.unavailable) { transform: scale(0.96); }
+        .btn-p { background: var(--accent); color: #ffffff; flex: 1; }
+        .btn-s { background: #ffffff; color: var(--accent); flex: 1; }
+
+        button:disabled, button.unavailable {
+            opacity: 0.4 !important; filter: grayscale(80%);
+            cursor: not-allowed !important; transform: none !important;
+        }
+
+        /* --- SHARED VIDEO VIEW STYLES --- */
         .workspace {
             position: absolute; top: 105px; bottom: 0; left: 0; width: 100%;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -100,13 +137,18 @@
             position: relative; background: #0a0c10; border: 1px solid #2a3140; border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
             padding: 3px; display: inline-flex; box-sizing: border-box; transition: all 0.3s ease; max-width: 100%; max-height: 100%;
         }
-        canvas { border-radius: 5px; background: #000; max-width: 100%; max-height: 100%; width: auto; height: auto; display: block; object-fit: contain; }
-        video { position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -1; }
 
-        #broadcaster-view video { position: relative; opacity: 1; pointer-events: auto; max-width: 100%; max-height: 100%; width: auto; height: auto; border-radius: 5px; display: block; object-fit: contain; }
+        canvas, #local-video { border-radius: 5px; background: #000; max-width: 100%; max-height: 100%; display: block; object-fit: contain; }
+        #remote-video { position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -1; }
 
-        #play-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 20; border-radius: 8px; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
-        #play-overlay span { background: var(--accent); color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 1.1em; pointer-events: none; }
+        .flip-btn {
+            position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.2); z-index: 10; padding: 12px;
+            border-radius: 50%; display: none; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        }
+        .flip-btn svg { width: 24px; height: 24px; fill: white; }
+        .flip-btn:hover { background: rgba(0,0,0,0.8); }
 
         .bottom-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; z-index: 10; width: 100%; flex-shrink: 0; }
         .btn-t { background: var(--border); color: var(--text-main); min-width: 140px; padding: 12px 16px; border-radius: 6px; font-size: 0.9em;}
@@ -116,8 +158,6 @@
         input[type="range"] { accent-color: var(--accent); cursor: pointer; width: 100px; }
 
         .btn-ring { background: var(--accent); color: white; padding: 16px 20px; font-size: 1.4em; border: none; border-radius: 12px; width: 100%; max-width: 500px; cursor: pointer; font-weight: 600; transition: 0.2s; flex-shrink: 0; margin-top: 20px;}
-        .btn-ring:hover:not(:disabled):not(.unavailable) { background: var(--accent-hover); transform: translateY(-3px); }
-        .btn-ring:disabled, .btn-ring.unavailable { background: #334155; color: var(--muted); cursor: not-allowed; transform: none; }
 
         .alert-mode { background-color: #1a0f0f !important; }
         .alert-mode #viewer-view .video-wrapper { border-color: #cc3333; box-shadow: 0 0 0 2px #cc3333, 0 0 30px rgba(204, 51, 51, 0.2); }
@@ -127,22 +167,21 @@
         @media (max-height: 500px) {
             .glimpse-center { top: 90px; transform: translate(-50%, -50%) scale(1.5); }
             #setup-content { top: 120px; }
-            .card { padding: 10px 20px; flex-direction: row; gap: 20px; border-radius: 12px; min-height: unset; }
-            #qrcode-wrapper { margin-bottom: 0; width: 90px; height: 90px; }
-            #qrcode { padding: 5px; }
+            .card { padding: 20px; min-height: unset; }
             p.subtitle { margin-bottom: 10px; font-size: 0.9em; }
-            .manual-join { margin-top: 15px; }
 
             .workspace { padding: 5px 10px 10px 10px; top: 105px; }
             .bottom-bar { margin-top: 10px; gap: 8px; }
             .btn-t { min-width: 120px; padding: 8px 12px; font-size: 0.8em; }
             .btn-ring { padding: 12px; font-size: 1.1em; margin-top: 10px; }
+            .flip-btn { bottom: 10px; right: 10px; padding: 8px; }
         }
     </style>
 </head>
 <body>
 
     <header>
+        <img src="icons/favicon192.png" alt="Glimpse" class="header-logo">
         <div id="header-controls" class="header-controls anim-element controls-hidden">
             <button id="btn-viewer-mute" class="icon-btn" onclick="toggleGlobalMute()" title="Toggle All Audio" style="display:none;">
                 <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
@@ -156,22 +195,24 @@
         </div>
     </header>
 
-    <div id="status-banner" class="status-banner info">Waiting for Broadcaster</div>
+    <div id="status-banner" class="status-banner info"></div>
     <h1 id="shared-glimpse" class="anim-element glimpse-center">Glimpse</h1>
 
     <div id="hub-view" class="anim-element view-visible">
         <p class="subtitle">Local video monitoring</p>
-        <div class="card" onclick="triggerReset()" title="Click to refresh ID">
-            <div id="qrcode-wrapper">
-                <div id="qrcode"></div>
-            </div>
-            <div class="instruction">Scan the QR code with your camera device<br>to start the session.</div>
-            <div id="qr-id-display" style="margin-top: 10px; font-family: monospace; font-size: 1.4em; color: var(--accent); font-weight: 600; letter-spacing: 4px;"></div>
-        </div>
+        <div class="card">
+            <div class="instruction-title">Create or Join a Session</div>
 
-        <div class="manual-join">
-            <input type="tel" id="manual-id" placeholder="Enter 6-digit ID" autocomplete="off" maxlength="6">
-            <button class="btn-p" onclick="joinAsBroadcaster()">Broadcast</button>
+            <div class="manual-join">
+                <input type="text" id="session-id" placeholder="e.g. living-room-1" autocomplete="off" oninput="checkIdLength()">
+                <div class="input-bg"></div>
+                <div class="hub-actions">
+                    <button id="btn-monitor" class="btn-s" onclick="startMonitor()" disabled>Monitor</button>
+                    <button id="btn-camera" class="btn-p" onclick="startBroadcaster()" disabled>Camera</button>
+                </div>
+            </div>
+
+            <div class="instruction-sub">Enter the exact same ID on both devices<br>to link them securely on the same WiFi.</div>
         </div>
     </div>
 
@@ -180,9 +221,6 @@
         <div class="video-container">
             <div class="video-wrapper">
                 <canvas id="display-canvas"></canvas>
-                <div id="play-overlay" onclick="forcePlay()">
-                    <span>Click to Show Video</span>
-                </div>
             </div>
         </div>
         <div id="bottom-bar" class="bottom-bar">
@@ -198,29 +236,63 @@
         <div class="video-container">
             <div class="video-wrapper">
                 <video id="local-video" autoplay playsinline muted></video>
+                <button id="flip-camera-btn" class="icon-btn flip-btn" onclick="flipCamera()" title="Flip Camera">
+                    <svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-8 13c-2.76 0-5-2.24-5-5h2.5l-3-3-3 3H6c0 3.31 2.69 6 6 6v-1zm4-7h-2.5l3 3 3-3H18c0-3.31-2.69-6-6-6v1c2.76 0 5 2.24 5 5z"/></svg>
+                </button>
             </div>
         </div>
         <button id="ring-btn" class="btn-ring" onclick="sendRing()" disabled>Ring Viewer</button>
     </div>
 
     <script>
-        // --- HIDDEN NAMESPACE CONFIGURATION ---
         const APP_PREFIX = "glimpse-net-";
 
         let currentMode = 'hub';
-        let myId, peer = null, dataConn = null, currentCall = null;
-        let persistentStatus = "Waiting for Broadcaster";
+        let peer = null, dataConn = null, currentCall = null;
+        let persistentStatus = "";
         let tempTimer = null;
 
-        document.addEventListener('keydown', (e) => {
-            if (currentMode !== 'hub') return;
-            if (e.key === 'c' || e.key === 'C') mockUI('viewer');
-            if (e.key === 'b' || e.key === 'B') mockUI('broadcaster');
+        // Camera Flip State
+        let hasMultipleCameras = false;
+        let currentFacingMode = 'environment';
+
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+            navigator.mediaDevices.enumerateDevices().then(devices => {
+                hasMultipleCameras = devices.filter(d => d.kind === 'videoinput').length > 1;
+            });
+        }
+
+        // KEYBOARD EVENT HANDLING (Only applies to touch devices)
+        const sessionIdInput = document.getElementById('session-id');
+        sessionIdInput.addEventListener('focus', () => {
+            if (window.matchMedia("(pointer: coarse)").matches) {
+                document.body.classList.add('keyboard-open');
+            }
+        });
+        sessionIdInput.addEventListener('blur', () => {
+            document.body.classList.remove('keyboard-open');
         });
 
-        function mockUI(target) {
-            setPersistentStatus("");
-            playForwardAnimation(target);
+        // Initialization & Hub Setup
+        window.addEventListener('load', () => {
+            const cachedId = localStorage.getItem('glimpseSessionId');
+            const hash = window.location.hash.substring(1);
+
+            if (hash) {
+                sessionIdInput.value = hash;
+            } else if (cachedId) {
+                sessionIdInput.value = cachedId;
+            } else {
+                sessionIdInput.value = "";
+            }
+            checkIdLength();
+        });
+
+        function checkIdLength() {
+            const val = document.getElementById('session-id').value.trim();
+            const isValid = val.length >= 4;
+            document.getElementById('btn-monitor').disabled = !isValid;
+            document.getElementById('btn-camera').disabled = !isValid;
         }
 
         function setPersistentStatus(msg, isInfo = true) {
@@ -249,7 +321,7 @@
                     tempTimer = null;
                     if (persistentStatus) {
                         banner.innerText = persistentStatus;
-                        if (persistentStatus.includes('Error') || persistentStatus.includes('Failed') || persistentStatus.includes('closed') || persistentStatus.includes('Blocked')) {
+                        if (persistentStatus.includes('Error') || persistentStatus.includes('Failed') || persistentStatus.includes('closed') || persistentStatus.includes('Blocked') || persistentStatus.includes('Lost')) {
                             banner.classList.remove('info');
                         } else {
                             banner.classList.add('info');
@@ -282,6 +354,10 @@
                 document.getElementById('btn-broadcaster-mute').style.display = 'flex';
                 document.getElementById('broadcaster-view').classList.add('view-visible');
                 document.getElementById('broadcaster-view').classList.remove('view-hidden');
+
+                if (hasMultipleCameras) {
+                    document.getElementById('flip-camera-btn').style.display = 'flex';
+                }
             }
         }
 
@@ -301,78 +377,71 @@
             }, delay);
         }
 
-        // Generate exactly 6 numbers
-        function genId() {
-            let id = '';
-            for (let i = 0; i < 6; i++) {
-                id += Math.floor(Math.random() * 10);
-            }
-            return id;
-        }
-
         const peerOpts = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
 
-        // INITIALIZATION ROUTER
-        window.addEventListener('load', () => {
-            const hash = window.location.hash.substring(1);
-            if (hash && hash.startsWith(APP_PREFIX)) {
-                TARGET_ID = hash;
-                window.history.replaceState(null, null, window.location.pathname);
-                initBroadcaster();
-            } else {
-                initHub();
-            }
-        });
-
-        // HUB/VIEWER LOGIC
+        // --- VIEWER LOGIC ---
         let globalAudioCtx = null, interactionDone = false, processLoopActive = false;
         let isSilenced = false, isAvail = true, gracePeriodEnd = 0, lastN = 0, isGlobalMuted = false;
         const remoteVideo = document.getElementById('remote-video');
         const canvas = document.getElementById('display-canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-        function initHub() {
-            myId = genId();
-            try {
-                const stored = localStorage.getItem('glimpseDynamicId');
-                // Regex check to ensure old string IDs are dumped for new numeric ones
-                if (stored && /^\d{6}$/.test(stored)) { myId = stored; } else { localStorage.setItem('glimpseDynamicId', myId); }
-            } catch(e) {}
+        function startMonitor(isRetry = false) {
+            const idVal = document.getElementById('session-id').value.trim();
+            if (idVal.length < 4) return;
 
-            const fullPeerId = APP_PREFIX + myId;
-            const link = new URL('#' + fullPeerId, window.location.href).href;
-            document.getElementById("qrcode").innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), {
-                text: link, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L
+            if(!isRetry) {
+                isForceClosed = false;
+                isRemoteClosing = false;
+                isHandlingDisconnect = false;
+                localStorage.setItem('glimpseSessionId', idVal);
+                window.history.replaceState(null, null, '#' + idVal);
+                enableAudioAndNotifs();
+                setPersistentStatus("Waiting for Camera with ID: " + idVal, true);
+                playForwardAnimation('viewer');
+            }
+
+            if (peer) { peer.removeAllListeners(); peer.destroy(); peer = null; }
+            peer = new Peer(APP_PREFIX + idVal, peerOpts);
+
+            peer.on('error', err => {
+                if (err.type === 'unavailable-id') {
+                    setPersistentStatus("Syncing session... retrying", true);
+                    setTimeout(() => {
+                        if (currentMode === 'viewer' && !isForceClosed) startMonitor(true);
+                    }, 1500);
+                } else if (err.type === 'peer-unavailable') {
+                    handleDisconnect();
+                }
             });
 
-            // Format ID nicely with a space in the middle for easier reading
-            document.getElementById("qr-id-display").innerText = myId.substring(0,3) + " " + myId.substring(3,6);
-            setPersistentStatus("Waiting for Broadcaster", true);
-
-            peer = new Peer(fullPeerId, peerOpts);
+            peer.on('disconnected', () => {
+                if (!isForceClosed && !isRemoteClosing) peer.reconnect();
+            });
 
             peer.on('call', call => {
                 call.answer();
                 call.on('stream', s => {
-                    playForwardAnimation('viewer');
-                    remoteVideo.srcObject = s;
-                    remoteVideo.muted = isGlobalMuted;
-                    document.getElementById('play-overlay').style.display = 'flex';
-                    remoteVideo.pause();
+                    if (remoteVideo.srcObject !== s) {
+                        remoteVideo.srcObject = s;
+                        remoteVideo.muted = isGlobalMuted;
+                        remoteVideo.play().catch(e => {
+                            if (e.name !== 'AbortError') console.warn("Play prevented:", e);
+                        });
 
-                    gracePeriodEnd = Date.now() + 30000;
-                    let loopStarted = false;
-                    const startEngine = () => {
-                        if (loopStarted) return;
-                        loopStarted = true;
-                        canvas.width = remoteVideo.videoWidth || 640;
-                        canvas.height = remoteVideo.videoHeight || 480;
-                        processLoopActive = true;
-                        setTimeout(process, 33);
-                    };
-                    remoteVideo.onloadedmetadata = startEngine;
-                    setTimeout(startEngine, 1500);
+                        gracePeriodEnd = Date.now() + 30000;
+                        let loopStarted = false;
+                        const startEngine = () => {
+                            if (loopStarted) return;
+                            loopStarted = true;
+                            canvas.width = remoteVideo.videoWidth || 640;
+                            canvas.height = remoteVideo.videoHeight || 480;
+                            processLoopActive = true;
+                            setTimeout(process, 33);
+                        };
+                        remoteVideo.onloadedmetadata = startEngine;
+                        setTimeout(startEngine, 1500);
+                    }
                 });
                 call.peerConnection.addEventListener('iceconnectionstatechange', () => {
                     if (call.peerConnection.iceConnectionState === 'disconnected' || call.peerConnection.iceConnectionState === 'failed') handleDisconnect();
@@ -383,50 +452,63 @@
             peer.on('connection', conn => {
                 dataConn = conn;
                 setPersistentStatus("", true);
+                conn.on('open', () => {
+                    conn.send(isAvail ? 'set-available' : 'set-unavailable');
+                });
+                setTimeout(() => { if(conn.open) conn.send(isAvail ? 'set-available' : 'set-unavailable'); }, 500);
+
                 conn.on('data', d => {
                     if (d === 'manual-alert') triggerManual();
-                    else if (d === 'broadcaster-closed') forceDisconnect("Broadcaster closed the session");
+                    else if (d === 'broadcaster-closed') handleRemoteClose("Camera closed the session");
                 });
                 conn.on('close', handleDisconnect);
             });
         }
 
-        // BROADCASTER LOGIC
+        // --- CAMERA LOGIC ---
         let localStream = null, isRetrying = false, retryCount = 0, retryTimer = null;
-        let isPeerOpen = false, hasAudio = false, isForceClosed = false;
+        let isPeerOpen = false, hasAudio = false, isForceClosed = false, isRemoteClosing = false, isHandlingDisconnect = false;
         const ringBtn = document.getElementById('ring-btn');
         let TARGET_ID = null;
 
-        function joinAsBroadcaster() {
-            // Strip any accidental spaces the user might have typed
-            const id = document.getElementById('manual-id').value.replace(/\s+/g, '');
-            if(id && /^\d{6}$/.test(id)) {
-                TARGET_ID = APP_PREFIX + id;
-                initBroadcaster();
-            } else {
-                showNotification("Enter exactly 6 numbers", 2000, false);
-            }
-        }
+        function startBroadcaster() {
+            const idVal = document.getElementById('session-id').value.trim();
+            if (idVal.length < 4) return;
 
-        function initBroadcaster() {
-            if (peer) { peer.destroy(); peer = null; }
+            isForceClosed = false;
+            isRemoteClosing = false;
+            isHandlingDisconnect = false;
+            localStorage.setItem('glimpseSessionId', idVal);
+            window.history.replaceState(null, null, '#' + idVal);
+            TARGET_ID = APP_PREFIX + idVal;
+
+            enableAudioAndNotifs();
+
+            if (peer) { peer.removeAllListeners(); peer.destroy(); peer = null; }
             setPersistentStatus("Connecting...", true);
-            playForwardAnimation('broadcaster');
-
             peer = new Peer(peerOpts);
+
+            peer.on('disconnected', () => {
+                if (!isForceClosed && !isRemoteClosing) peer.reconnect();
+            });
 
             const handleSuccess = function(stream, requestedAudio) {
                 localStream = stream;
                 hasAudio = requestedAudio && stream.getAudioTracks().length > 0;
                 updateMicIcon();
                 const videoEl = document.getElementById('local-video');
-                videoEl.srcObject = stream;
-                videoEl.play().catch(e => console.log("Auto-play prevented:", e));
+                if (videoEl.srcObject !== stream) {
+                    videoEl.srcObject = stream;
+                    videoEl.play().catch(e => {
+                        if (e.name !== 'AbortError') console.warn("Auto-play prevented:", e);
+                    });
+                }
                 if(isPeerOpen && !isRetrying && !isForceClosed) attemptConnect();
             };
 
             const initCamera = (requestAudio) => {
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: requestAudio })
+                const videoConstraints = { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } };
+                navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: requestAudio })
                     .then(stream => handleSuccess(stream, requestAudio))
                     .catch(err => {
                         if (requestAudio) { initCamera(false); }
@@ -454,12 +536,57 @@
             });
 
             peer.on('error', err => { if (err.type === 'peer-unavailable') handleDrop(); });
+            playForwardAnimation('broadcaster');
+        }
+
+        async function flipCamera() {
+            if (!hasMultipleCameras) return;
+
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            const requestAudio = hasAudio;
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: requestAudio
+                });
+
+                const oldTracks = localStream.getTracks();
+                localStream = stream;
+
+                const videoEl = document.getElementById('local-video');
+                if (videoEl.srcObject !== stream) {
+                    videoEl.srcObject = stream;
+                    videoEl.play().catch(e => {
+                        if (e.name !== 'AbortError') console.warn("Auto-play prevented:", e);
+                    });
+                }
+
+                if (currentCall && currentCall.peerConnection) {
+                    const videoTrack = stream.getVideoTracks()[0];
+                    const senderVideo = currentCall.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (senderVideo && videoTrack) senderVideo.replaceTrack(videoTrack);
+
+                    if (requestAudio) {
+                        const audioTrack = stream.getAudioTracks()[0];
+                        const senderAudio = currentCall.peerConnection.getSenders().find(s => s.track && s.track.kind === 'audio');
+                        if (senderAudio && audioTrack) senderAudio.replaceTrack(audioTrack);
+                    }
+                }
+                oldTracks.forEach(t => t.stop());
+            } catch(e) {
+                console.error("Camera switch failed", e);
+            }
         }
 
         function attemptConnect() {
-            if (isRetrying || !localStream || !isPeerOpen || peer.destroyed || isForceClosed) return;
+            if (isRetrying || !localStream || !isPeerOpen || peer.destroyed || isForceClosed || isRemoteClosing) return;
             if (peer.disconnected) peer.reconnect();
-            if (retryCount === 0) setPersistentStatus("Finding Monitor...", true);
+
+            if (retryCount === 0) {
+                const displayId = TARGET_ID.replace(APP_PREFIX, '');
+                setPersistentStatus("Finding Monitor with ID: " + displayId, true);
+            }
 
             currentCall = peer.call(TARGET_ID, localStream);
             dataConn = peer.connect(TARGET_ID);
@@ -469,7 +596,9 @@
                     retryCount = 0;
                     setPersistentStatus("");
                     ringBtn.disabled = false;
+                    ringBtn.classList.remove('unavailable');
                     ringBtn.innerText = isAvail ? "Ring Viewer" : "Viewer Unavailable";
+                    if (!isAvail) ringBtn.classList.add('unavailable');
                 });
                 dataConn.on('data', data => {
                     if (data === 'set-unavailable') {
@@ -477,7 +606,7 @@
                     } else if (data === 'set-available') {
                         isAvail = true; ringBtn.classList.remove('unavailable'); ringBtn.innerText = "Ring Viewer";
                     } else if (data === 'viewer-closed') {
-                        forceDisconnect("Connection closed by viewer");
+                        handleRemoteClose("Connection closed by viewer");
                     }
                 });
                 dataConn.on('close', handleDrop);
@@ -497,76 +626,110 @@
         }
 
         const handleDrop = () => {
-            if (isRetrying || isForceClosed) return;
+            if (isRetrying || isForceClosed || isRemoteClosing) return;
             isRetrying = true;
             if (dataConn) { dataConn.close(); dataConn = null; }
             if (currentCall) { currentCall.close(); currentCall = null; }
             ringBtn.disabled = true;
 
-            if (retryCount >= MAX_RETRIES) {
-                setPersistentStatus("Connection Failed. Exit and try again.", false);
-                return;
-            }
-            retryCount++;
-            setPersistentStatus(`Retrying (${retryCount}/${MAX_RETRIES})...`, true);
             if (retryTimer) clearTimeout(retryTimer);
-            retryTimer = setTimeout(() => { isRetrying = false; attemptConnect(); }, 3000);
+            retryTimer = setTimeout(() => {
+                isRetrying = false;
+                const displayId = TARGET_ID.replace(APP_PREFIX, '');
+                setPersistentStatus("Finding Monitor with ID: " + displayId, true);
+                attemptConnect();
+            }, 3000);
         };
 
-        // SHARED TEARDOWN LOGIC
-        function forceDisconnect(msg) {
-            isForceClosed = true;
+        const handleDisconnect = () => {
+            if (isForceClosed || isRemoteClosing || isHandlingDisconnect) return;
+            isHandlingDisconnect = true;
+
+            const idVal = document.getElementById('session-id').value.trim();
+            setPersistentStatus("Connection Lost", false);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            setTimeout(() => {
+                isHandlingDisconnect = false;
+                if (!isForceClosed && !isRemoteClosing && currentMode === 'viewer') {
+                    setPersistentStatus("Waiting for Camera with ID: " + idVal, true);
+                }
+            }, 3000);
+        };
+
+        // --- SHARED TEARDOWN LOGIC ---
+        function handleRemoteClose(msg) {
+            isRemoteClosing = true;
             if (retryTimer) clearTimeout(retryTimer);
             if (dataConn) { dataConn.close(); dataConn = null; }
             if (currentCall) { currentCall.close(); currentCall = null; }
+
             if (currentMode === 'broadcaster') {
                 ringBtn.disabled = true;
-                ringBtn.innerText = "Session Ended";
+                ringBtn.innerText = "Ring Viewer";
                 ringBtn.classList.add('unavailable');
             } else {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
             }
+
             setPersistentStatus(msg, false);
-            setTimeout(() => { resetToHub(); }, 3000);
+
+            setTimeout(() => {
+                isRemoteClosing = false;
+                if (isForceClosed) return;
+
+                if (currentMode === 'broadcaster') {
+                    const displayId = TARGET_ID.replace(APP_PREFIX, '');
+                    setPersistentStatus("Finding Monitor with ID: " + displayId, true);
+                    isRetrying = false;
+                    retryCount = 0;
+                    attemptConnect();
+                } else if (currentMode === 'viewer') {
+                    const idVal = document.getElementById('session-id').value.trim();
+                    setPersistentStatus("Waiting for Camera with ID: " + idVal, true);
+                }
+            }, 3000);
         }
 
         function closeSession() {
-            if (currentMode === 'broadcaster') {
-                if (dataConn && dataConn.open) dataConn.send('broadcaster-closed');
-            } else if (currentMode === 'viewer') {
-                if (dataConn && dataConn.open) dataConn.send('viewer-closed');
+            isForceClosed = true;
+
+            if (currentMode === 'broadcaster' && dataConn && dataConn.open) {
+                dataConn.send('broadcaster-closed');
+            } else if (currentMode === 'viewer' && dataConn && dataConn.open) {
+                dataConn.send('viewer-closed');
             }
+
+            localStorage.removeItem('glimpseSessionId');
+            document.getElementById('session-id').value = "";
+            checkIdLength();
+            window.history.replaceState(null, null, window.location.pathname);
+
             resetToHub();
         }
 
-        function triggerReset() {
-            const card = document.querySelector('.card');
-            if (card) card.classList.add('shrinking');
-            setTimeout(() => { resetToHub(); if (card) card.classList.remove('shrinking'); }, 150);
-        }
-
         function resetToHub() {
+            setPersistentStatus("");
             processLoopActive = false;
-            isForceClosed = false;
+            isHandlingDisconnect = false;
             isRetrying = false;
             retryCount = 0;
             if (retryTimer) clearTimeout(retryTimer);
 
             if (dataConn) { dataConn.close(); dataConn = null; }
             if (currentCall) { currentCall.close(); currentCall = null; }
-            if (peer) { peer.destroy(); peer = null; }
+            if (peer) { peer.removeAllListeners(); peer.destroy(); peer = null; }
 
-            if (remoteVideo.srcObject) { remoteVideo.srcObject.getTracks().forEach(t => t.stop()); remoteVideo.srcObject = null; }
+            if (remoteVideo && remoteVideo.srcObject) { remoteVideo.srcObject.getTracks().forEach(t => t.stop()); remoteVideo.srcObject = null; }
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             gracePeriodEnd = 0; lastN = 0; motionStartTime = 0; lastMotionTime = 0;
 
             returnToHub();
-            setTimeout(() => { initHub(); }, 400);
         }
 
-        // AUDIO & TOGGLES
+        // --- AUDIO & TOGGLES ---
         function toggleGlobalMute() {
             isGlobalMuted = !isGlobalMuted;
             if (remoteVideo) remoteVideo.muted = isGlobalMuted;
@@ -625,7 +788,7 @@
             }
         }
 
-        // MOTION & AUDIO ENGINE
+        // --- MOTION & AUDIO ENGINE ---
         function enableAudioAndNotifs() {
             if (interactionDone) return;
             interactionDone = true;
@@ -647,11 +810,6 @@
                 osc.stop(globalAudioCtx.currentTime + 0.1);
                 if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
             } catch(e) {}
-        }
-
-        function forcePlay() {
-            remoteVideo.play().then(() => { document.getElementById('play-overlay').style.display = 'none'; }).catch(e => {});
-            if(!interactionDone) enableAudioAndNotifs();
         }
 
         document.getElementById('sens-slider').addEventListener('input', function() {
