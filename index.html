@@ -132,14 +132,56 @@
         }
         @supports (padding-top: env(safe-area-inset-top)) { .workspace { top: calc(105px + env(safe-area-inset-top)); } }
 
-        .video-container { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
-        .video-wrapper {
-            position: relative; background: #0a0c10; border: 1px solid #2a3140; border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-            padding: 3px; display: inline-flex; box-sizing: border-box; transition: all 0.3s ease; max-width: 100%; max-height: 100%;
+        .video-container {
+            flex: 1 1 0%;
+            min-height: 0;
+            min-width: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
         }
 
-        canvas, #local-video { border-radius: 5px; background: #000; max-width: 100%; max-height: 100%; display: block; object-fit: contain; }
+        .video-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            max-width: 100%;
+            max-height: 100%;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            min-width: 0;
+        }
+
+        canvas, #local-video {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            min-height: 0;
+            min-width: 0;
+            border-radius: 8px;
+            background: #000;
+            border: 4px solid #0a0c10;
+            outline: 1px solid #2a3140;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            box-sizing: border-box;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+
+        #local-video.mirror-feed {
+            transform: scaleX(-1) !important;
+            -webkit-transform: scaleX(-1) !important;
+        }
+
         #remote-video { position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -1; }
+        #broadcaster-view video { position: relative; opacity: 1; pointer-events: auto; z-index: 1;}
 
         .flip-btn {
             position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.6);
@@ -147,9 +189,10 @@
             border-radius: 50%; display: none; align-items: center; justify-content: center;
             backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
         }
-        .flip-btn svg { width: 24px; height: 24px; fill: white; }
+        .flip-btn svg { width: 24px; height: 24px; stroke: white; }
         .flip-btn:hover { background: rgba(0,0,0,0.8); }
 
+        /* Bottom Controls */
         .bottom-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; z-index: 10; width: 100%; flex-shrink: 0; }
         .btn-t { background: var(--border); color: var(--text-main); min-width: 140px; padding: 12px 16px; border-radius: 6px; font-size: 0.9em;}
         .btn-t.active { background: var(--accent); color: white; }
@@ -160,9 +203,9 @@
         .btn-ring { background: var(--accent); color: white; padding: 16px 20px; font-size: 1.4em; border: none; border-radius: 12px; width: 100%; max-width: 500px; cursor: pointer; font-weight: 600; transition: 0.2s; flex-shrink: 0; margin-top: 20px;}
 
         .alert-mode { background-color: #1a0f0f !important; }
-        .alert-mode #viewer-view .video-wrapper { border-color: #cc3333; box-shadow: 0 0 0 2px #cc3333, 0 0 30px rgba(204, 51, 51, 0.2); }
+        .alert-mode #viewer-view canvas { border-color: #cc3333; outline-color: #cc3333; box-shadow: 0 0 30px rgba(204, 51, 51, 0.4); }
         .manual-call-mode { background-color: #0b1120 !important; }
-        .manual-call-mode #viewer-view .video-wrapper { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 0 30px rgba(121, 115, 240, 0.3); }
+        .manual-call-mode #viewer-view canvas { border-color: var(--accent); outline-color: var(--accent); box-shadow: 0 0 30px rgba(121, 115, 240, 0.4); }
 
         @media (max-height: 500px) {
             .glimpse-center { top: 90px; transform: translate(-50%, -50%) scale(1.5); }
@@ -187,7 +230,7 @@
                 <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
             </button>
             <button id="btn-broadcaster-mute" class="icon-btn" onclick="toggleMicMute()" title="Toggle Microphone" style="display:none;">
-                <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c3.39-.49 6-3.39 6-6.92h-1.7z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c3.39-.49 6-3.39 6-6.92h-1.7c0 1.23-.49 2.37-1.22 3.28zM4.27 3L3 4.27l6 6V11c0 1.66 1.34 3 3 3 .23 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.58c2.11-.3 3.96-1.39 5.22-2.95l2.51 2.51 1.27-1.27L4.27 3zM12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>
             </button>
             <button class="icon-btn" onclick="closeSession()" title="Close Connection">
                 <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
@@ -237,7 +280,12 @@
             <div class="video-wrapper">
                 <video id="local-video" autoplay playsinline muted></video>
                 <button id="flip-camera-btn" class="icon-btn flip-btn" onclick="flipCamera()" title="Flip Camera">
-                    <svg viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-8 13c-2.76 0-5-2.24-5-5h2.5l-3-3-3 3H6c0 3.31 2.69 6 6 6v-1zm4-7h-2.5l3 3 3-3H18c0-3.31-2.69-6-6-6v1c2.76 0 5 2.24 5 5z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 7H17.5L15.5 4H8.5L6.5 7H3C1.895 7 1 7.895 1 9V19C1 20.105 1.895 21 3 21H21C22.105 21 23 20.105 23 19V9C23 7.895 22.105 7 21 7Z"/>
+
+                        <path d="M12 16.5a2.49 2.49 0 0 1 -1.76 -4.27" />
+                        <path d="M12 11.5a2.49 2.49 0 0 1 1.76 4.27" />
+                    </svg>
                 </button>
             </div>
         </div>
@@ -256,13 +304,18 @@
         let hasMultipleCameras = false;
         let currentFacingMode = 'environment';
 
-        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-            navigator.mediaDevices.enumerateDevices().then(devices => {
-                hasMultipleCameras = devices.filter(d => d.kind === 'videoinput').length > 1;
-            });
+        function detectCameras() {
+            if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+                navigator.mediaDevices.enumerateDevices().then(devices => {
+                    hasMultipleCameras = devices.filter(d => d.kind === 'videoinput').length > 1;
+                    if (hasMultipleCameras && currentMode === 'broadcaster') {
+                        document.getElementById('flip-camera-btn').style.display = 'flex';
+                    }
+                });
+            }
         }
 
-        // KEYBOARD EVENT HANDLING (Only applies to touch devices)
+        // KEYBOARD EVENT HANDLING
         const sessionIdInput = document.getElementById('session-id');
         sessionIdInput.addEventListener('focus', () => {
             if (window.matchMedia("(pointer: coarse)").matches) {
@@ -273,7 +326,6 @@
             document.body.classList.remove('keyboard-open');
         });
 
-        // Initialization & Hub Setup
         window.addEventListener('load', () => {
             const cachedId = localStorage.getItem('glimpseSessionId');
             const hash = window.location.hash.substring(1);
@@ -431,16 +483,22 @@
 
                         gracePeriodEnd = Date.now() + 30000;
                         let loopStarted = false;
-                        const startEngine = () => {
-                            if (loopStarted) return;
-                            loopStarted = true;
-                            canvas.width = remoteVideo.videoWidth || 640;
-                            canvas.height = remoteVideo.videoHeight || 480;
-                            processLoopActive = true;
-                            setTimeout(process, 33);
+
+                        remoteVideo.onloadedmetadata = () => {
+                            if (remoteVideo.videoWidth > 0) {
+                                canvas.style.aspectRatio = `${remoteVideo.videoWidth} / ${remoteVideo.videoHeight}`;
+                            }
+                            if (!loopStarted) {
+                                loopStarted = true;
+                                canvas.width = remoteVideo.videoWidth || 640;
+                                canvas.height = remoteVideo.videoHeight || 480;
+                                processLoopActive = true;
+                                setTimeout(process, 33);
+                            }
                         };
-                        remoteVideo.onloadedmetadata = startEngine;
-                        setTimeout(startEngine, 1500);
+                        setTimeout(() => {
+                            if(!loopStarted && remoteVideo.videoWidth) remoteVideo.onloadedmetadata();
+                        }, 1500);
                     }
                 });
                 call.peerConnection.addEventListener('iceconnectionstatechange', () => {
@@ -497,12 +555,27 @@
                 hasAudio = requestedAudio && stream.getAudioTracks().length > 0;
                 updateMicIcon();
                 const videoEl = document.getElementById('local-video');
+
+                if (currentFacingMode === 'user') {
+                    videoEl.classList.add('mirror-feed');
+                } else {
+                    videoEl.classList.remove('mirror-feed');
+                }
+
                 if (videoEl.srcObject !== stream) {
                     videoEl.srcObject = stream;
+                    videoEl.onloadedmetadata = () => {
+                        if (videoEl.videoWidth > 0) {
+                            videoEl.style.aspectRatio = `${videoEl.videoWidth} / ${videoEl.videoHeight}`;
+                        }
+                    };
                     videoEl.play().catch(e => {
                         if (e.name !== 'AbortError') console.warn("Auto-play prevented:", e);
                     });
                 }
+
+                detectCameras();
+
                 if(isPeerOpen && !isRetrying && !isForceClosed) attemptConnect();
             };
 
@@ -545,18 +618,39 @@
             currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
             const requestAudio = hasAudio;
 
+            let currentlyMuted = false;
+            if (hasAudio && localStream && localStream.getAudioTracks().length > 0) {
+                currentlyMuted = !localStream.getAudioTracks()[0].enabled;
+            }
+
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
                     audio: requestAudio
                 });
 
+                if (requestAudio && stream.getAudioTracks().length > 0) {
+                    stream.getAudioTracks()[0].enabled = !currentlyMuted;
+                }
+
                 const oldTracks = localStream.getTracks();
                 localStream = stream;
 
                 const videoEl = document.getElementById('local-video');
+
+                if (currentFacingMode === 'user') {
+                    videoEl.classList.add('mirror-feed');
+                } else {
+                    videoEl.classList.remove('mirror-feed');
+                }
+
                 if (videoEl.srcObject !== stream) {
                     videoEl.srcObject = stream;
+                    videoEl.onloadedmetadata = () => {
+                        if (videoEl.videoWidth > 0) {
+                            videoEl.style.aspectRatio = `${videoEl.videoWidth} / ${videoEl.videoHeight}`;
+                        }
+                    };
                     videoEl.play().catch(e => {
                         if (e.name !== 'AbortError') console.warn("Auto-play prevented:", e);
                     });
@@ -574,6 +668,9 @@
                     }
                 }
                 oldTracks.forEach(t => t.stop());
+
+                updateMicIcon();
+
             } catch(e) {
                 console.error("Camera switch failed", e);
             }
@@ -648,6 +745,7 @@
             const idVal = document.getElementById('session-id').value.trim();
             setPersistentStatus("Connection Lost", false);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.style.aspectRatio = "auto";
 
             setTimeout(() => {
                 isHandlingDisconnect = false;
@@ -670,6 +768,7 @@
                 ringBtn.classList.add('unavailable');
             } else {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                canvas.style.aspectRatio = "auto";
             }
 
             setPersistentStatus(msg, false);
@@ -724,6 +823,7 @@
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.style.aspectRatio = "auto";
             gracePeriodEnd = 0; lastN = 0; motionStartTime = 0; lastMotionTime = 0;
 
             returnToHub();
@@ -859,7 +959,9 @@
             if (gracePeriodEnd > 0 && now >= gracePeriodEnd) gracePeriodEnd = 0;
 
             if (remoteVideo.videoWidth > 0 && (canvas.width !== remoteVideo.videoWidth || canvas.height !== remoteVideo.videoHeight)) {
-                canvas.width = remoteVideo.videoWidth; canvas.height = remoteVideo.videoHeight; prev = null;
+                canvas.width = remoteVideo.videoWidth; canvas.height = remoteVideo.videoHeight;
+                canvas.style.aspectRatio = `${remoteVideo.videoWidth} / ${remoteVideo.videoHeight}`;
+                prev = null;
             }
 
             ctx.drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
