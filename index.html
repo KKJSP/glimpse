@@ -27,7 +27,7 @@
 
         body {
             font-family: -apple-system, sans-serif; background: var(--bg-dark); color: var(--text-main);
-            margin: 0; position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: 100vh; width: 100dvw;
+            margin: 0; position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: 100vh; width: 100vw;
             overflow: hidden; transition: background-color 0.4s ease;
         }
 
@@ -430,7 +430,7 @@
             }, delay);
         }
 
-        const peerOpts = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
+        const peerOpts = { config: { iceServers: [], sdpSemantics: 'unified-plan' } };
 
         // --- VIEWER LOGIC ---
         let globalAudioCtx = null, interactionDone = false, processLoopActive = false;
